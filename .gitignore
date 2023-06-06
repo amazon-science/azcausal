@@ -3,6 +3,7 @@
 **/.idea
 
 scratch/
+docs/build/*
 *.csv
 *.parquet
 

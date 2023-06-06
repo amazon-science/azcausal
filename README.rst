@@ -36,6 +36,13 @@ Usage
 
 .. code:: python
 
+    from azcausal.core.error import JackKnife
+    from azcausal.core.panel import Panel
+    from azcausal.util import zeros_like, to_matrix
+    from azcausal.data import CaliforniaProp99
+    from azcausal.estimators.panel.sdid import SDID
+
+
     # load an example data set with the columns Year, State, PacksPerCapita, treated.
     df = CaliforniaProp99().load()
 
@@ -62,6 +69,9 @@ Usage
     estm = estimator.fit(pnl)
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
 
+    # show the results in a plot
+    estimator.plot(estm, trend=True, sc=True)
+
     # run an error validation method
     method = JackKnife()
     err = estimator.error(estm, method)
@@ -69,6 +79,8 @@ Usage
     print("Standard Error (se):", err["se"])
     print("Error Confidence Interval (90%):", err["CI"]["90%"])
 
+
+.. image:: docs/source/images/sdid.png
 
 .. _Estimators:
 

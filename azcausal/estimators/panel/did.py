@@ -12,7 +12,11 @@ def did(pre_contr, post_contr, pre_treat, post_treat):
     delta_treat = (post_treat - pre_treat)
 
     # finally the difference in difference
-    return delta_treat - delta_contr
+    att = delta_treat - delta_contr
+
+    return dict(att=att,
+                delta_contr=delta_contr, delta_treat=delta_treat,
+                pre_contr=pre_contr, post_contr=post_contr, pre_treat=pre_treat, post_treat=post_treat)
 
 
 class DID(Estimator):
@@ -38,7 +42,6 @@ class DID(Estimator):
         post_treat = Y_post_treat.mean(axis=0).mean()
 
         # finally the difference in difference
-        att = did(pre_contr, post_contr, pre_treat, post_treat)
+        y = did(pre_contr, post_contr, pre_treat, post_treat)
 
-        return dict(name="did", estimator=self, panel=pnl, att=att,
-                    pre_contr=pre_contr, post_contr=post_contr, pre_treat=pre_treat, post_treat=post_treat)
+        return dict(name="did", estimator=self, panel=pnl, **y)

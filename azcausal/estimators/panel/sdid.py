@@ -1,7 +1,7 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import matplotlib.pyplot as plt
 from azcausal.core.error import JackKnife
 from azcausal.core.estimator import Estimator
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify, Sampling
@@ -53,66 +53,97 @@ class SDID(Estimator):
         Y_pre_synth = Y_pre_contr.T @ omega
         Y_post_synth = Y_post_contr.T @ omega
 
-        # the average treatment effect on the treated
-        att = did(Y_pre_synth @ lambd, Y_post_synth.mean(), Y_pre_treat.mean(axis=0) @ lambd, Y_post_treat.mean())
+        # pre weighted by lambda
+        pre_sc = Y_pre_synth @ lambd
+        pre_treat = Y_pre_treat.mean(axis=0) @ lambd
 
-        pred = pd.DataFrame(dict(time=pnl.time(),
-                                 synth_contr=pnl.Y(contr=True).T @ omega,
-                                 treat=pnl.Y(treat=True).mean(axis=0),
-                                 post=(pnl.time() >= pnl.start)
+        # the average treatment effect on the treated
+        y = did(pre_sc, Y_post_synth.mean(), pre_treat, Y_post_treat.mean())
+
+        # calculate att for each time period
+        Y_avg_post_treat = Y_post_treat.mean(axis=0)
+        att = [did(pre_sc, Y_post_synth[k], pre_treat, Y_avg_post_treat[k])["att"] for k in range(pnl.n_post)]
+
+        # create the data on which sdid made the decision
+        data = pd.DataFrame(dict(time=pnl.time(),
+                                 SC=pnl.Y(contr=True).T @ omega,
+                                 T=pnl.Y(treat=True).mean(axis=0),
+                                 treatment=(pnl.time() >= pnl.start).astype(int),
+                                 lambd=np.pad(lambd, (0, pnl.n_time() - len(lambd)), constant_values=0),
+                                 att=np.pad(att, (pnl.n_time() - len(att), 0), constant_values=0)
                                  )
                             ).set_index("time")
 
-        return dict(name="sdid", estimator=self, panel=pnl, att=att, pred=pred, lambd=lambd,
-                    omega=omega, noise=noise, solvers=solvers)
+        return dict(name="sdid", estimator=self, panel=pnl, data=data, lambd=lambd,
+                    omega=omega, noise=noise, solvers=solvers, **y)
 
     def error(self, estm, method, **kwargs):
         return method.run(estm, "att", f_estimate=SDIDEstimationFunction(type(method) != JackKnife), **kwargs)
 
-    def plot(self, estm, title=None, show=True):
-        pnl = estm["panel"]
-        start_time = pnl.start
+    def plot(self, estm, title=None, trend=False, sc=True, show=True):
 
-        pred, lambd, omega = estm["pred"], estm["lambd"], estm["omega"]
+        data, lambd, omega = estm["data"], estm["lambd"], estm["omega"]
+        start_time = data.query("treatment == 0").index.max()
 
-        fig, ((top, right), (bottom, void)) = plt.subplots(2, 2,
-                                                           figsize=(12, 4),
-                                                           height_ratios=[4, 1],
-                                                           width_ratios=[9, 1],
-                                                           sharex='col')
-        if title:
-            fig.suptitle(title)
+        fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2,
+                                                                                 figsize=(12, 4),
+                                                                                 height_ratios=[4, 2],
+                                                                                 width_ratios=[8.5, 1.5])
 
-        top.plot(pred.index, pred["synth_contr"], label="SC", color="red")
-        top.plot(pred.index, pred["treat"], label="T", color="blue")
+        top_left.plot(data.index, data["T"], label="T", color="blue")
+        if sc:
+            top_left.plot(data.index, data["SC"], label="SC", color="red")
 
-        # sc_pre = pre["synth_contr"] @ lambd
-        # sc_post = post["synth_contr"].mean()
-        # treat_pre = pre["treat"] @ lambd
-        # treat_post = post["treat"].mean()
-        # top.plot()
+        top_left.set_xticklabels([])
+        top_left.axvline(start_time, color="black", alpha=0.3)
 
-        top.axvline(start_time, color="black")
-        top.legend()
-        top.set_title(title)
+        if trend:
+            top_left.plot(data.index, data["T"] + data["att"], "--", color="blue", alpha=0.5)
+            for t, v in data.query("treatment == 1")["att"].items():
+                top_left.arrow(t, data.loc[t, "T"], 0, v, color="black",
+                               length_includes_head=True, head_starts_at_zero=True, head_width=0.3, width=0.01,
+                               head_length=2)
 
-        w = lambd
-        bottom.bar(pred.query("not post").index, w, color="black", width=1)
-        bottom.scatter(pred.index[:len(w)][w > 0], w[w > 0], color="red")
+        def plot_arrow(ax, x, y, dy, **kwargs):
+            ax.annotate("", xy=(x, y), xytext=(x, y + dy), arrowprops=dict(arrowstyle="<-", **kwargs))
 
-        bottom.axvline(start_time, color="black")
-        bottom.set_ylim(0, 1)
-        bottom.set_yticklabels([])
+        plot_arrow(top_right, 1, estm["pre_contr"], estm["delta_contr"], color="red", lw=2)
+        plot_arrow(top_right, 2, estm["pre_treat"], estm["delta_treat"], color="blue", lw=2)
+        plot_arrow(top_right, 3, estm["pre_treat"], estm["att"], color="black", lw=2)
+
+        if sc:
+            top_right.set_xlim((0.5, 3.5))
+        else:
+            top_right.set_xlim((1.5, 3.5))
+
+        top_right.set_xticklabels([])
+        top_right.set_yticklabels([])
+
+        top_right.set_ylim(top_left.get_ylim())
+        top_right.set_xticklabels([])
+
+        top_left.legend()
+        top_left.set_title(title)
+
+        w = data.query("treatment == 0")["lambd"]
+        bottom_left.fill_between(w.index, 0.0, w, color="black")
+        bottom_left.axvline(start_time, color="black", alpha=0.3)
+        bottom_left.set_ylim(0, 1)
+        bottom_left.set_xlim(*top_left.get_xlim())
+        bottom_left.set_yticklabels([])
+        bottom_left.xaxis.set_tick_params(rotation=90)
 
         w = omega
-        right.barh(np.arange(len(w)), w, color="red")
-        right.set_yticklabels([])
-
-        void.set_axis_off()
+        wp = sorted(w)[::-1]
+        bottom_right.fill_between(np.arange(len(w)), 0, wp, color="red")
+        bottom_right.set_xticklabels([])
+        bottom_right.set_yticklabels([])
 
         if show:
             plt.tight_layout()
             fig.show()
+
+        return fig
 
 
 class SDIDEstimationFunction(object):

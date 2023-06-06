@@ -2,12 +2,13 @@ import numpy as np
 
 from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
-from azcausal.util import to_matrices
 from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.sdid import SDID
+from azcausal.util import to_matrices
 
 if __name__ == '__main__':
+
     # load an example data set with the columns Year, State, PacksPerCapita, treated.
     df = CaliforniaProp99().load()
 
@@ -26,9 +27,6 @@ if __name__ == '__main__':
     # run the estimator
     estm = estimator.fit(pnl)
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
-
-    # show the results in a plot
-    estimator.plot(estm, show=True)
 
     # create a process pool for parallelization
     pool = Pool(mode="processes", progress=True)
