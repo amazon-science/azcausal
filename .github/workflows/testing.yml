@@ -15,6 +15,9 @@ jobs:
         run: |
           pip install .
           rm -rf azcausal
+      - name: Install pytest
+        run: |
+          pip install pytest
       - name: Run Tests
         run: |
           pytest -v --maxfail 1
