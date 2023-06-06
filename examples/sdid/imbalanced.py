@@ -32,6 +32,9 @@ if __name__ == '__main__':
     estm = estimator.fit(pnl)
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
 
+    # show the results in a plot
+    estimator.plot(estm, trend=True)
+
     # run an error validation method
     method = JackKnife()
     err = estimator.error(estm, method)
