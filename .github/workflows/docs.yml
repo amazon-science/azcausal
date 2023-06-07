@@ -36,7 +36,7 @@ jobs:
           cd docs
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install nbsphinx sphinx_rtd_theme
       - name: Sphinx build
         run: |
           make html

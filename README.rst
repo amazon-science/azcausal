@@ -14,18 +14,12 @@ Synthetic Difference-in-Difference (SDID). Moreover, error estimates via Placebo
 Installation
 ********************************************************************************
 
-The official release is always available at PyPi:
+
+To install the current release, please execute:
 
 .. code:: bash
 
-    pip install -U azcausal
-
-
-For the current developer version:
-
-.. code:: bash
-
-    pip install git+ssh://git@github.com/amazon-science/azcausal.git
+    pip install git+https://github.com/amazon-science/azcausal.git
 
 
 .. _Usage:

@@ -1,4 +1,4 @@
-name: azcausal
+name: Testing
 
 on: [push]
 
