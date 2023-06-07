@@ -31,22 +31,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Change directory to docs
-        run: |
-          cd docs
-      - name: Install dependencies
-        run: |
-          pip install nbsphinx sphinx_rtd_theme
-      - name: Sphinx build
-        run: |
-          make html
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/"
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          # Upload entire repository
-          path: 'build/html'
+          path: 'docs/_build/html/'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v2
