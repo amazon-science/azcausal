@@ -22,8 +22,18 @@ class Panel:
 
         self.check()
 
+    def __getitem__(self, key):
+        return Panel(self.outcome.loc[key], self.treatment.loc[key])
+
     def check(self):
+
+        # check if they have the same shape
         assert self.outcome.shape == self.treatment.shape, "The shape of outcome and treatment need to be identical."
+        assert np.all(self.outcome.columns == self.treatment.columns), "The columns of `outcome` and `treatment` must be identical"
+
+        # check for `nan` values
+        assert not np.any(np.isnan(self.Y())), "The outcome data set contains `nan` values."
+        assert not np.any(np.isnan(self.W())), "The treatment data set contains `nan` values."
 
     def get(self, value, time=slice(None), units=slice(None), pre=False, post=False, trim=False,
             treat=False, contr=False, to_numpy=False, transpose=False):

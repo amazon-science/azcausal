@@ -33,7 +33,7 @@ if __name__ == '__main__':
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
 
     # show the results in a plot
-    estimator.plot(estm, trend=True)
+    estimator.plot(estm, trend=True, sc=True)
 
     # run an error validation method
     method = JackKnife()
