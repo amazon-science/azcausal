@@ -21,4 +21,4 @@ def donors(pnl, n, method="rmse"):
     T = pnl.units(treat=True)
     units = np.concatenate([T, S])
 
-    return pnl[:, units]
+    return pnl[units]

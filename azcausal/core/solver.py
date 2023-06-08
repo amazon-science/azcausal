@@ -15,11 +15,12 @@ class Solver(object):
 
 class Sampling:
 
-    def __init__(self, uniform=True, nnls=True, n_random=100) -> None:
+    def __init__(self, uniform=True, nnls=True, n_random=100, alpha=4) -> None:
         super().__init__()
         self.uniform = uniform
         self.nnls = nnls
         self.n_random = n_random
+        self.alpha = alpha
 
     def __call__(self, A, b, zeta, f):
         _, n = A.shape
@@ -33,7 +34,7 @@ class Sampling:
             xs += [xp]
 
         if self.n_random is not None and self.n_random > 0:
-            xs += [np.random.dirichlet(np.ones(n)) for _ in range(self.n_random)]
+            xs += [np.random.dirichlet(self.alpha * np.ones(n)) for _ in range(self.n_random)]
 
         fs = np.array([f(A, x, b, zeta) for x in xs])
         k = fs.argmin()

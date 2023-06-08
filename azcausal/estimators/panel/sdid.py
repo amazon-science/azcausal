@@ -74,6 +74,8 @@ class SDID(Estimator):
                                  )
                             ).set_index("time")
 
+        data["T'"] = data["T"] - data["att"]
+
         return dict(name="sdid", estimator=self, panel=pnl, data=data, lambd=lambd,
                     omega=omega, noise=noise, solvers=solvers, **y)
 
@@ -98,11 +100,10 @@ class SDID(Estimator):
         top_left.axvline(start_time, color="black", alpha=0.3)
 
         if trend:
-            top_left.plot(data.index, data["T"] + data["att"], "--", color="blue", alpha=0.5)
+            top_left.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
             for t, v in data.query("treatment == 1")["att"].items():
-                top_left.arrow(t, data.loc[t, "T"], 0, v, color="black",
-                               length_includes_head=True, head_starts_at_zero=True, head_width=0.3, width=0.01,
-                               head_length=2)
+                top_left.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
+                               length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
 
         def plot_arrow(ax, x, y, dy, **kwargs):
             ax.annotate("", xy=(x, y), xytext=(x, y + dy), arrowprops=dict(arrowstyle="<-", **kwargs))
@@ -127,6 +128,10 @@ class SDID(Estimator):
 
         w = data.query("treatment == 0")["lambd"]
         bottom_left.fill_between(w.index, 0.0, w, color="black")
+
+        w = data.query("treatment == 1")["lambd"]
+        bottom_left.fill_between(w.index, 0.0, w, color="black")
+
         bottom_left.axvline(start_time, color="black", alpha=0.3)
         bottom_left.set_ylim(0, 1)
         bottom_left.set_xlim(*top_left.get_xlim())
