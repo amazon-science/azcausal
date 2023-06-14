@@ -50,11 +50,11 @@ Usage
     treat_units = list(df.query("treated == 1")["State"].unique())
 
     # create the treatment matrix based on the information above
-    treatment = zeros_like(outcome)
-    treatment.loc[start_time:, treatment.columns.isin(treat_units)] = 1
+    intervention = zeros_like(outcome)
+    intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, treatment)
+    pnl = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
@@ -72,6 +72,7 @@ Usage
 
     print("Standard Error (se):", err["se"])
     print("Error Confidence Interval (90%):", err["CI"]["90%"])
+
 
 
 .. image:: docs/source/images/sdid.png

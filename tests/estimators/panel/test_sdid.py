@@ -41,7 +41,7 @@ def test_california_correct(sdid, data):
 def test_jackknife_correct(sdid, data):
     pnl = data.panel()
     # we need at least two treatment units for jackknife
-    pnl.treatment["Wyoming"].loc[1989:] = 1
+    pnl.intervention["Wyoming"].loc[1989:] = 1
 
     estm = sdid.fit(pnl)
     assert_almost_equal(-4.1538623012790161, estm["att"])
@@ -88,8 +88,8 @@ def data_generator():
 @pytest.mark.parametrize("df,correct", zip(data_generator(), from_r()))
 def test_correctness_comprehensive(sdid, df, correct):
     outcome = to_matrix(df, "Year", "State", "PacksPerCapita")
-    treatment = to_matrix(df, "Year", "State", "treated")
-    pnl = Panel(outcome, treatment)
+    intervention = to_matrix(df, "Year", "State", "treated")
+    pnl = Panel(outcome, intervention)
 
     estm = sdid.fit(pnl)
     assert_almost_equal(correct["tau_hat"], estm["att"])

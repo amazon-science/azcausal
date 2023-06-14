@@ -79,3 +79,24 @@ def to_matrices(df, index, cols, *values, fillna=None):
         v = fillna
         fillna = defaultdict(lambda: v)
     return tuple([to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values])
+
+
+
+def to_balanced(dy):
+    p = pd.MultiIndex.from_product(dy.index.levels, names=dy.index.names)
+    return dy.reindex(p, fill_value=0)
+
+
+def stime(dy, time, fillna=None, dtype=None):
+    unit_to_start = dy.query("intervention == 1").groupby("unit")[time].min().to_frame("stime")
+
+    dy = dy.merge(unit_to_start, on="unit", how="left")
+    y = dy[time] - dy["stime"]
+
+    if fillna:
+        y = y.fillna(fillna)
+
+    if dtype:
+        y = y.astype(dtype)
+
+    return y

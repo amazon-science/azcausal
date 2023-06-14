@@ -17,9 +17,9 @@ def test_Y_shapes(data):
     pnl.outcome.loc[2001] = 0.0
     pnl.outcome.loc[2002] = 0.0
 
-    pnl.treatment.loc[2001] = 0
-    pnl.treatment.loc[2001, "Wyoming"] = 1
-    pnl.treatment.loc[2002] = 0
+    pnl.intervention.loc[2001] = 0
+    pnl.intervention.loc[2001, "Wyoming"] = 1
+    pnl.intervention.loc[2002] = 0
 
     time_pre = pnl.time(pre=True)
     assert_almost_equal(np.arange(1970, 1989), time_pre)
@@ -42,8 +42,8 @@ def test_panel_dates(data):
     assert pnl.latest_start == 1989
 
     pnl.outcome.loc[2020] = 0.0
-    pnl.treatment.loc[2020] = 0
-    pnl.treatment.loc[2020, "Wyoming"] = 1
+    pnl.intervention.loc[2020] = 0
+    pnl.intervention.loc[2020, "Wyoming"] = 1
 
     assert pnl.latest_end == 2020
     assert pnl.earliest_end == 2000

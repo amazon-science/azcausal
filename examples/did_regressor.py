@@ -1,28 +1,31 @@
-import numpy as np
-
 from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
 from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.sdid import SDID
-from azcausal.util import to_matrices
+from azcausal.estimators.panel.did import DID, DIDRegressor
+from azcausal.util import to_matrix, zeros_like
 
 if __name__ == '__main__':
-
     # load an example data set with the columns Year, State, PacksPerCapita, treated.
     df = CaliforniaProp99().load()
 
     # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    outcome, treatment = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
+    outcome = to_matrix(df, "Year", "State", "PacksPerCapita", fillna=0.0)
 
-    # if there are nan values it was not balanced in the first place.
-    assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
+    # the time when the intervention started
+    start_time = df.query("treated == 1")["Year"].min()
 
-    # create a panel object to access observations conveniently
-    pnl = Panel(outcome, treatment)
+    # the units that have been treated
+    treat_units = list(df.query("treated == 1")["State"].unique())
 
-    # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = SDID()
+    # create the treatment matrix based on the information above
+    interventions = zeros_like(outcome)
+    interventions.loc[start_time:, interventions.columns.isin(treat_units)] = 1
+
+    pnl = Panel(outcome, interventions)
+
+    # initialize an estimator object, here difference in difference (did)
+    estimator = DIDRegressor()
 
     # run the estimator
     estm = estimator.fit(pnl)

@@ -64,12 +64,12 @@ class JackKnife(Error):
         units = pnl.units()
         n = len(units)
         outcome = pnl.outcome
-        treatment = pnl.treatment
+        intervention = pnl.intervention
 
         for k in range(n):
             u = units[k]
 
-            pnl = Panel(outcome.drop(columns=[u]), treatment.drop(columns=[u]))
+            pnl = Panel(outcome.drop(columns=[u]), intervention.drop(columns=[u]))
 
             if pnl.n_treat > 0:
                 yield pnl
@@ -97,10 +97,10 @@ class Placebo(Error):
             placebo = self.rng.choice(np.arange(pnl.n_contr), size=n_treat, replace=False)
 
             Wp = np.zeros_like(outcome.values)
-            Wp[:, placebo] = pnl.get("treatment", treat=True, to_numpy=True)
-            treatment = pd.DataFrame(Wp, index=outcome.index, columns=outcome.columns)
+            Wp[:, placebo] = pnl.get("intervention", treat=True, to_numpy=True)
+            intervention = pd.DataFrame(Wp, index=outcome.index, columns=outcome.columns)
 
-            yield Panel(outcome, treatment)
+            yield Panel(outcome, intervention)
 
     def se(self, estms):
         n = len(estms)
@@ -114,7 +114,7 @@ class Placebo(Error):
 
 class Bootstrap(Error):
 
-    def __init__(self, n_samples=100, rng=RandomState(42), mode="stratified", **kwargs) -> None:
+    def __init__(self, n_samples=100, rng=RandomState(42), mode="random", **kwargs) -> None:
         super().__init__(**kwargs)
         self.n_samples = n_samples
         self.mode = mode
@@ -125,7 +125,7 @@ class Bootstrap(Error):
         return np.sqrt((n - 1) / n) * np.std(estms, ddof=1)
 
     def generate(self, pnl):
-        outcome, treatment = pnl.outcome, pnl.treatment
+        outcome, intervention = pnl.outcome, pnl.intervention
         units = pnl.units()
         N = len(units)
 
@@ -140,11 +140,11 @@ class Bootstrap(Error):
                 u = self.rng.choice(units, size=N, replace=True, p=p)
             # sample from control and treatment independently
             elif self.mode == "stratified":
-                u_treat = self.rng.choice(treatment.columns[pnl.w], size=pnl.n_treat, replace=True)
-                u_contr = self.rng.choice(treatment.columns[~pnl.w], size=pnl.n_contr, replace=True)
+                u_treat = self.rng.choice(intervention.columns[pnl.w], size=pnl.n_treat, replace=True)
+                u_contr = self.rng.choice(intervention.columns[~pnl.w], size=pnl.n_contr, replace=True)
                 u = np.concatenate([u_treat, u_contr])
             else:
                 raise Exception(f"Unknown mode: {self.mode}. Available modes are `random`, `bayes`, and `stratified`.")
 
-            if treatment[u].values.sum() > 0:
-                yield Panel(outcome[u], treatment[u])
+            if intervention[u].values.sum() > 0:
+                yield Panel(outcome[u], intervention[u])

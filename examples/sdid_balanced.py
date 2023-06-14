@@ -2,10 +2,10 @@ import numpy as np
 
 from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
-from azcausal.util import to_matrices
 from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.did import DID
+from azcausal.estimators.panel.sdid import SDID
+from azcausal.util import to_matrices
 
 if __name__ == '__main__':
 
@@ -13,16 +13,16 @@ if __name__ == '__main__':
     df = CaliforniaProp99().load()
 
     # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    outcome, treatment = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
+    outcome, intervention = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
 
     # if there are nan values it was not balanced in the first place.
     assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, treatment)
+    pnl = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = DID()
+    estimator = SDID()
 
     # run the estimator
     estm = estimator.fit(pnl)

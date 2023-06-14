@@ -5,7 +5,7 @@ import pandas as pd
 from azcausal.core.error import JackKnife
 from azcausal.core.estimator import Estimator
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify, Sampling
-from azcausal.estimators.panel.did import did
+from azcausal.estimators.panel.did import did_simple
 
 
 def default_solver(sampling=Sampling(uniform=True, nnls=False, n_random=None)):
@@ -58,26 +58,25 @@ class SDID(Estimator):
         pre_treat = Y_pre_treat.mean(axis=0) @ lambd
 
         # the average treatment effect on the treated
-        y = did(pre_sc, Y_post_synth.mean(), pre_treat, Y_post_treat.mean())
+        did = did_simple(pre_sc, Y_post_synth.mean(), pre_treat, Y_post_treat.mean())
 
         # calculate att for each time period
         Y_avg_post_treat = Y_post_treat.mean(axis=0)
-        att = [did(pre_sc, Y_post_synth[k], pre_treat, Y_avg_post_treat[k])["att"] for k in range(pnl.n_post)]
+        att = (Y_avg_post_treat - pre_treat) - (Y_post_synth - pre_sc)
+
+        W = (pnl.time() >= pnl.start).astype(int)
+        T = pnl.Y(treat=True).mean(axis=0)
+        SC = pnl.Y(contr=True).T @ omega
 
         # create the data on which sdid made the decision
-        data = pd.DataFrame(dict(time=pnl.time(),
-                                 SC=pnl.Y(contr=True).T @ omega,
-                                 T=pnl.Y(treat=True).mean(axis=0),
-                                 treatment=(pnl.time() >= pnl.start).astype(int),
-                                 lambd=np.pad(lambd, (0, pnl.n_time() - len(lambd)), constant_values=0),
-                                 att=np.pad(att, (pnl.n_time() - len(att), 0), constant_values=0)
-                                 )
-                            ).set_index("time")
-
-        data["T'"] = data["T"] - data["att"]
+        data = pd.DataFrame(dict(time=pnl.time(), SC=SC, T=T, W=W))
+        data.loc[W == 0, "lambd"] = lambd
+        data.loc[W == 1, "att"] = att
+        data["T'"] = data["T"] - data["att"].fillna(0.0)
+        data = data.set_index("time")
 
         return dict(name="sdid", estimator=self, panel=pnl, data=data, lambd=lambd,
-                    omega=omega, noise=noise, solvers=solvers, **y)
+                    omega=omega, noise=noise, solvers=solvers, **did)
 
     def error(self, estm, method, **kwargs):
         return method.run(estm, "att", f_estimate=SDIDEstimationFunction(type(method) != JackKnife), **kwargs)
@@ -85,7 +84,7 @@ class SDID(Estimator):
     def plot(self, estm, title=None, trend=False, sc=True, show=True):
 
         data, lambd, omega = estm["data"], estm["lambd"], estm["omega"]
-        start_time = data.query("treatment == 0").index.max()
+        start_time = data.query("W == 0").index.max()
 
         fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2,
                                                                                  figsize=(12, 4),
@@ -101,7 +100,7 @@ class SDID(Estimator):
 
         if trend:
             top_left.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
-            for t, v in data.query("treatment == 1")["att"].items():
+            for t, v in data.query("W == 1")["att"].items():
                 top_left.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
                                length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
 
@@ -126,10 +125,10 @@ class SDID(Estimator):
         top_left.legend()
         top_left.set_title(title)
 
-        w = data.query("treatment == 0")["lambd"]
+        w = data.query("W == 0")["lambd"]
         bottom_left.fill_between(w.index, 0.0, w, color="black")
 
-        w = data.query("treatment == 1")["lambd"]
+        w = data.query("W == 1")["lambd"]
         bottom_left.fill_between(w.index, 0.0, w, color="black")
 
         bottom_left.axvline(start_time, color="black", alpha=0.3)

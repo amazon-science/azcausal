@@ -42,11 +42,27 @@ class CaliforniaProp99(DataSet):
 
     def panel(self):
         data = self.load()
-        outcome, treatment = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")
-        return Panel(outcome, treatment)
+        outcome, intervention = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")
+        return Panel(outcome, intervention)
 
     def remote(self):
         return "https://raw.githubusercontent.com/synth-inference/synthdid/master/data/california_prop99.csv"
 
     def file(self):
         return "california_prop99.csv"
+
+
+class Abortion(DataSet):
+
+    def load(self):
+        return pd.read_stata(self.local())
+    def panel(self):
+        data = self.load()
+        outcome, intervention = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")
+        return Panel(outcome, intervention)
+
+    def remote(self):
+        return "https://github.com/scunning1975/mixtape/raw/master/abortion.dta"
+
+    def file(self):
+        return "abortion.dta"

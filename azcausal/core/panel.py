@@ -5,7 +5,7 @@ from azcausal.util import argmax
 
 class Panel:
 
-    def __init__(self, outcome, treatment) -> None:
+    def __init__(self, outcome, intervention) -> None:
         """
         A collection of different panel observations.
 
@@ -13,48 +13,69 @@ class Panel:
         ----------
         outcome : pd.DataFrame
             The observations
-        treatment : pd.DataFrame
+        intervention : pd.DataFrame
             The treatment values, where `true` indicates treatment and `false` does not.
         """
         super().__init__()
         self.outcome = outcome
-        self.treatment = treatment
+        self.intervention = intervention
 
         self.check()
 
     def __getitem__(self, key):
-        return Panel(self.outcome[key], self.treatment[key])
+        return Panel(self.outcome[key], self.intervention[key])
 
     @property
     def loc(self):
-        outcome, treatment = self.outcome, self.treatment
+        outcome, intervention = self.outcome, self.intervention
 
         class Index:
             def __getitem__(self, key):
-                return Panel(outcome.loc[key], treatment.loc[key])
+                return Panel(outcome.loc[key], intervention.loc[key])
 
         return Index()
 
     @property
     def iloc(self):
-        outcome, treatment = self.outcome, self.treatment
+        outcome, intervention = self.outcome, self.intervention
 
         class Index:
             def __getitem__(self, key):
-                return Panel(outcome.iloc[key], treatment.iloc[key])
+                return Panel(outcome.iloc[key], intervention.iloc[key])
 
         return Index()
 
     def check(self):
 
         # check if they have the same shape
-        assert self.outcome.shape == self.treatment.shape, "The shape of outcome and treatment need to be identical."
+        assert self.outcome.shape == self.intervention.shape, "The shape of outcome and intervention need to be identical."
         assert np.all(
-            self.outcome.columns == self.treatment.columns), "The columns of `outcome` and `treatment` must be identical"
+            self.outcome.columns == self.intervention.columns), "The columns of `outcome` and `intervention` must be identical"
 
         # check for `nan` values
         assert not np.any(np.isnan(self.Y())), "The outcome data set contains `nan` values."
-        assert not np.any(np.isnan(self.W())), "The treatment data set contains `nan` values."
+        assert not np.any(np.isnan(self.W())), "The intervention data set contains `nan` values."
+
+    def to_frame(self, index=True, treatment=False, rtime=True):
+        dy = self.outcome.unstack().to_frame("outcome")
+        dy = dy.join(self.intervention.unstack().to_frame("intervention"))
+        dy.index = dy.index.set_names(["unit", "time"])
+        dy = dy.reset_index()
+
+        if treatment:
+            label = treatment if isinstance(treatment, str) else "treatment"
+            dy[label] = dy["unit"].isin(set(self.units(treat=True))).astype(int)
+
+        if rtime:
+            time = self.time()
+            label = rtime if isinstance(rtime, str) else "rtime"
+            time_to_index = pd.DataFrame({label: np.arange(len(time))}, index=pd.Index(time, name="time"))
+            dy = dy.merge(time_to_index, on="time")
+
+        if index:
+            dy = dy.set_index(["unit", "time"])
+
+        return dy
 
     def get(self, value, time=slice(None), units=slice(None), pre=False, post=False, trim=False,
             treat=False, contr=False, to_numpy=False, transpose=False):
@@ -63,17 +84,17 @@ class Panel:
         Parameters
         ----------
         value : str
-            The value that is being returned of the panel, e.g. Y for observations or W for treatment values.
+            The value that is being returned of the panel, e.g. Y for observations or W for intervention values.
         time : slice or list
             Whether only a specific time range should be included.
         units : slice or list
             Whether only specific units shall be returned.
         pre : bool
-            Whether the time should be set to the period before treatment
+            Whether the time should be set to the period before intervention
         post : bool
-            Whether the time should be set after at least one treatment has been applied.
+            Whether the time should be set after at least one intervention has been applied.
         trim : bool
-            Removes trailing time periods where no treatments in any units have occurred.
+            Removes trailing time periods where no interventions in any units have occurred.
         treat : bool
             Whether only treatment units should be returned.
         contr : bool
@@ -200,7 +221,7 @@ class Panel:
 
     @property
     def latest_start(self):
-        k = self.treatment.values.argmax(axis=0)[self.w].max()
+        k = self.intervention.values.argmax(axis=0)[self.w].max()
         return self.time()[k]
 
     @property
@@ -232,10 +253,10 @@ class Panel:
         return self.as_block("outcome", **kwargs)
 
     def W(self, to_numpy=True, transpose=True, **kwargs):
-        return self.get("treatment", to_numpy=to_numpy, transpose=transpose, **kwargs)
+        return self.get("intervention", to_numpy=to_numpy, transpose=transpose, **kwargs)
 
     def W_as_block(self, **kwargs):
-        return self.as_block("treatment", **kwargs)
+        return self.as_block("intervention", **kwargs)
 
     def as_block(self, value, to_numpy=True, transpose=True, **kwargs):
         kwargs["to_numpy"] = to_numpy
@@ -256,7 +277,7 @@ class Panel:
         w : np.array
             A boolean array where `true` represents a unit is treated at some point in time, `false` otherwise.
         """
-        return self.treatment.values.sum(axis=0) > 0
+        return self.intervention.values.sum(axis=0) > 0
 
     @property
     def wp(self):
@@ -266,12 +287,12 @@ class Panel:
         wp : np.array
             A boolean array where `true` represents at least one unit is treated in the i-time step, `false` otherwise.
         """
-        return self.treatment.values.sum(axis=1) > 0
+        return self.intervention.values.sum(axis=1) > 0
 
     # ----------------------------------------------- CONVENIENCE -----------------------------------------------------
 
     def copy(self):
-        return Panel(self.outcome.copy(), self.treatment.copy())
+        return Panel(self.outcome.copy(), self.intervention.copy())
 
     @property
     def n_pre(self):

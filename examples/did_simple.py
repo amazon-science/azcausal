@@ -1,8 +1,9 @@
-from azcausal.core.error import JackKnife
+from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
-from azcausal.util import zeros_like, to_matrix
+from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.sdid import SDID
+from azcausal.estimators.panel.did import DID, DIDRegressor
+from azcausal.util import to_matrix, zeros_like
 
 if __name__ == '__main__':
 
@@ -19,25 +20,27 @@ if __name__ == '__main__':
     treat_units = list(df.query("treated == 1")["State"].unique())
 
     # create the treatment matrix based on the information above
-    treatment = zeros_like(outcome)
-    treatment.loc[start_time:, treatment.columns.isin(treat_units)] = 1
+    intervention = zeros_like(outcome)
+    intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
 
-    # create a panel object to access observations conveniently
-    pnl = Panel(outcome, treatment)
+    pnl = Panel(outcome, intervention)
 
-    # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = SDID()
+    # initialize an estimator object, here difference in difference (did)
+    estimator = DID()
 
     # run the estimator
     estm = estimator.fit(pnl)
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
 
-    # show the results in a plot
-    estimator.plot(estm, trend=True, sc=True)
+    # plot the results
+    estimator.plot(estm, title="CaliforniaProp99")
 
-    # run an error validation method
-    method = JackKnife()
-    err = estimator.error(estm, method)
+    # create a process pool for parallelization
+    pool = Pool(mode="processes", progress=True)
+
+    # run the error validation method
+    method = Placebo(n_samples=50)
+    err = estimator.error(estm, method, parallelize=pool)
 
     print("Standard Error (se):", err["se"])
     print("Error Confidence Interval (90%):", err["CI"]["90%"])

@@ -22,7 +22,7 @@ data = dict(
     license='Apache License 2.0',
     keywords="causality, inference",
     packages=find_packages(include=['azcausal', 'azcausal.*']),
-    install_requires=['pandas', 'scipy', 'tqdm', 'matplotlib'],
+    install_requires=['pandas', 'scipy', 'tqdm', 'matplotlib', 'statsmodels', 'linearmodels'],
     platforms='any',
     classifiers=[
         'Intended Audience :: Developers',
