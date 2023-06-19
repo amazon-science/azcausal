@@ -2,7 +2,7 @@ from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
 from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.ssnbiclustering import SNNBiclustering
+from azcausal.estimators.panel.ssnb import SNNBiclustering
 from azcausal.util import to_matrix, zeros_like
 
 if __name__ == '__main__':
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     pool = Pool(mode="processes", progress=True)
 
     # run the error validation method
-    method = Placebo(n_samples=50)
+    method = Placebo(n_samples=5)
     err = estimator.error(estm, method, parallelize=pool)
 
     print("Standard Error (se):", err["se"])

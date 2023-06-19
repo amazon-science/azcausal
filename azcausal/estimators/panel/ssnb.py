@@ -1,83 +1,63 @@
-from typing import Any, Iterator, List, Optional, Tuple, Union
 import warnings
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 from abc import abstractmethod
-from numpy import ndarray, float64
-from sklearn.cluster import SpectralBiclustering
-from sklearn.utils import check_array  # type: ignore
-from tensorly.decomposition import parafac
+from typing import Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
 from cachetools import cached
 from cachetools.keys import hashkey
-from azcausal.core.panel import Panel
-from azcausal.core.error import JackKnife
+from numpy import ndarray, float64
+from sklearn.cluster import SpectralBiclustering
+from sklearn.utils import check_array
+from tensorly.decomposition import parafac
+
 from azcausal.core.estimator import Estimator
-from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify, Sampling
-from azcausal.estimators.panel.did import did_simple
+from azcausal.core.panel import Panel
 
 
 class TensorCom(Estimator):
-    """Base class for all whatif algorithms that uses the tensor view"""
 
     def __init__(
-        self,
-        verbose: Optional[bool] = False,
-        min_singular_value: float = 1e-7,
+            self,
+            verbose: Optional[bool] = False,
+            min_singular_value: float = 1e-7,
     ) -> None:
-
         self.verbose = verbose
         self.min_singular_value = min_singular_value
-        
-    
-    def fit(
-        self,
-        pnl
-    ) -> None:
-        """take sparse tensor and fill it!
 
-        Args:
-            pnl (Panel): Panel data
+    def fit(self, pnl) -> dict:
 
-        """
         # get tensor from Panel data
-        tensor = self._get_tensor(
-            pnl
-        )
+        tensor = self._get_tensor(pnl)
+
         tensor_filled, feasible_estimate = self._fit(tensor)
         feasible_estimate[~np.isnan(tensor)] = 1
-        N, T, I = tensor_filled.shape
+
         # assume control is intervention at index 0
         treatment_effects = tensor_filled[..., 1:] - tensor_filled[..., :1]
-        units_treated = np.where(np.isin(pnl.units(), pnl.units(treat = True)))[0]
-        
+        units_treated = np.where(np.isin(pnl.units(), pnl.units(treat=True)))[0]
+
+        # TODO: Should we support multiple treatments here? For now [0]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            ate = np.nanmean(treatment_effects, axis = (0, 1))
-            att = np.nanmean(treatment_effects[units_treated], axis = (0, 1))
-            ite = np.nanmean(treatment_effects, axis = 1)
-        
-        estimates = dict(att = att, ate = ate, ite = ite, feasible = feasible_estimate,
-                          original_tensor = tensor, tensor_filled = tensor_filled,  treatment_effects = treatment_effects )
+            ate = np.nanmean(treatment_effects, axis=(0, 1))[0]
+            att = np.nanmean(treatment_effects[units_treated], axis=(0, 1))[0]
+            ite = np.nanmean(treatment_effects, axis=1)[0]
+
+        estimates = dict(att=att, ate=ate, ite=ite, feasible=feasible_estimate,
+                         original_tensor=tensor, tensor_filled=tensor_filled, treatment_effects=treatment_effects)
         return dict(name="SNNB", estimator=self, panel=pnl, **estimates)
 
-
     def _fit(self, tensor):
-        
-        # fill tensor
         tensor_filled, feasible_tensor = self._fit_transform(tensor)
         return tensor_filled, feasible_tensor
 
-
-    def _get_tensor(
-        self,
-        pnl: Panel,
-    ) -> ndarray:
+    def _get_tensor(self, pnl: Panel) -> ndarray:
 
         # populate actions dict
         outcome, intervention = pnl.outcome.T, pnl.intervention.T
         I = len(np.unique(intervention))
-        N,T = outcome.shape
+        N, T = outcome.shape
         tensor = self._populate_tensor(
             N,
             T,
@@ -102,7 +82,6 @@ class TensorCom(Estimator):
             ]
         return tensor
 
-    
     @abstractmethod
     def _fit_transform(self, Y: ndarray) -> ndarray:
         """take sparse tensor and return a full tensor
@@ -122,7 +101,6 @@ class TensorCom(Estimator):
         """returns method-specifc summary"""
         raise NotImplementedError()
 
-    
     def _check_input_matrix(self, X: ndarray, missing_mask: ndarray, ndim: int) -> None:
         """
         check to make sure that the input matrix
@@ -145,7 +123,7 @@ class TensorCom(Estimator):
             )
 
     def _prepare_input_data(
-        self, X: ndarray, missing_mask: ndarray, ndim: int
+            self, X: ndarray, missing_mask: ndarray, ndim: int
     ) -> ndarray:
         """
         prepare input matrix X. return if valid else terminate
@@ -158,40 +136,38 @@ class TensorCom(Estimator):
 
     def plot(self, estm, title=None, trend=True, C=True, show=True):
 
-            panel = estm["panel"]
-            filled_tensor = estm["tensor_filled"]
-            original_tensor = estm["original_tensor"]
-            fig, ax = plt.subplots(1, 1, figsize=(12, 4))
-            units_treated = np.where(np.isin(panel.units(), panel.units(treat = True)))[0]
-            units_ctrl = np.where(np.isin(panel.units(), panel.units(treat = False)))[0]
-        
-            index = panel.outcome.index    
-            average_control_units = np.nanmean(original_tensor[units_ctrl, :, :], axis = (0,2))
-            average_treated_units = np.nanmean(original_tensor[units_treated, :, :], axis = (0,2))
-            average_control_for_treated_units = np.nanmean(filled_tensor[units_treated, panel.n_pre:, 0], axis = 0)
-            ax.plot(index, average_treated_units, label="T", color="blue")
-            if C:
-                ax.plot(index, average_control_units, label="C", color="red")
+        panel = estm["panel"]
+        filled_tensor = estm["tensor_filled"]
+        original_tensor = estm["original_tensor"]
+        fig, ax = plt.subplots(1, 1, figsize=(12, 4))
+        units_treated = np.where(np.isin(panel.units(), panel.units(treat=True)))[0]
+        units_ctrl = np.where(np.isin(panel.units(), panel.units(treat=False)))[0]
 
-            average_control_for_treated_units
-            if trend:
-                ax.plot(index[panel.n_pre:], average_control_for_treated_units, "--", color="blue", alpha=0.5)
-                for t, v, v_ in zip(index[panel.n_pre:], average_control_for_treated_units, average_treated_units[panel.n_pre:]):
-                    ax.arrow(t, v, 0, v_-v, color="black",
-                            length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
+        index = panel.outcome.index
+        average_control_units = np.nanmean(original_tensor[units_ctrl, :, :], axis=(0, 2))
+        average_treated_units = np.nanmean(original_tensor[units_treated, :, :], axis=(0, 2))
+        average_control_for_treated_units = np.nanmean(filled_tensor[units_treated, panel.n_pre:, 0], axis=0)
+        ax.plot(index, average_treated_units, label="T", color="blue")
+        if C:
+            ax.plot(index, average_control_units, label="C", color="red")
 
-            start_time = index[panel.n_pre]
-            ax.axvline(start_time, color="black", alpha=0.3)
-            ax.set_title(title)
+        if trend:
+            ax.plot(index[panel.n_pre:], average_control_for_treated_units, "--", color="blue", alpha=0.5)
+            for t, v, v_ in zip(index[panel.n_pre:], average_control_for_treated_units,
+                                average_treated_units[panel.n_pre:]):
+                ax.arrow(t, v, 0, v_ - v, color="black",
+                         length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
 
-            if show:
-                plt.legend()
-                plt.tight_layout()
-                fig.show()
+        start_time = index[panel.n_pre]
+        ax.axvline(start_time, color="black", alpha=0.3)
+        ax.set_title(title)
 
-            return fig
+        if show:
+            plt.legend()
+            plt.tight_layout()
+            fig.show()
 
-
+        return fig
 
 
 class SNNBiclustering(TensorCom):
@@ -200,23 +176,23 @@ class SNNBiclustering(TensorCom):
     """
 
     def __init__(
-        self,
-        max_rank=None,
-        spectral_t=None,
-        linear_span_eps=0.1,
-        subspace_eps=0.1,
-        min_value=None,
-        max_value=None,
-        verbose=False,
-        min_singular_value=1e-7,
-        min_row_sparsity=0.3,
-        min_col_sparsity=0.3,
-        min_cluster_sparsity=0.3,
-        min_cluster_size=9,
-        no_clusterings=3,
-        min_num_clusters=5,
-        num_estimates=3,
-        seed=None
+            self,
+            max_rank=None,
+            spectral_t=None,
+            linear_span_eps=0.1,
+            subspace_eps=0.1,
+            min_value=None,
+            max_value=None,
+            verbose=False,
+            min_singular_value=1e-7,
+            min_row_sparsity=0.3,
+            min_col_sparsity=0.3,
+            min_cluster_sparsity=0.3,
+            min_cluster_size=9,
+            no_clusterings=3,
+            min_num_clusters=5,
+            num_estimates=3,
+            seed=None
     ):
         """
         Parameters
@@ -300,7 +276,7 @@ class SNNBiclustering(TensorCom):
             self.seed = np.random.randint(100)
 
     def _filter_cluster(self, cluster_mask, rows, cols):
-        # if very very sparse, drop
+        # if very sparse, drop
         if cluster_mask.mean() < 0.2:
             return
         # remove columns and then rows that are mostly nans
@@ -360,7 +336,7 @@ class SNNBiclustering(TensorCom):
             )
             model.fit(self.mask)
 
-            ## process clusters
+            # process clusters
             row_clusters = np.unique(model.row_labels_)
             col_clusters = np.unique(model.column_labels_)
             # loop over clusters
@@ -421,7 +397,6 @@ class SNNBiclustering(TensorCom):
         # reshape matrix into tensor
         tensor = filled_matrix.reshape(N, T, I)
         feasible_tensor = feasible_matrix.reshape(N, T, I)
-        
 
         # clear cache
         self._map_missing_value.cache.clear()
@@ -430,7 +405,7 @@ class SNNBiclustering(TensorCom):
         return tensor, feasible_tensor
 
     def _snn_fit_transform(
-        self, X: ndarray, test_set: Optional[ndarray] = None
+            self, X: ndarray, test_set: Optional[ndarray] = None
     ) -> ndarray:
         """
         complete missing entries in matrix
@@ -460,7 +435,6 @@ class SNNBiclustering(TensorCom):
             print("[SNN] complete")
         return X_imputed, feasible_matrix
 
-
     @cached(
         cache=dict(),  # type: ignore
         key=lambda self, X, obs_rows, obs_cols: hashkey(obs_rows, obs_cols),
@@ -485,7 +459,7 @@ class SNNBiclustering(TensorCom):
         if viable_clusters == 0:
             return None
 
-        selected_cluster = np.argsort(clusters_sizes)[-self.num_estimates :]
+        selected_cluster = np.argsort(clusters_sizes)[-self.num_estimates:]
         selected_cluster = [
             cluster
             for cluster in selected_cluster
@@ -532,9 +506,9 @@ class SNNBiclustering(TensorCom):
                 continue
 
             if (
-                cluster.sum(0).min() < 2
-                or cluster.mean(1).sum() < 2
-                or cluster.mean() < 0.3
+                    cluster.sum(0).min() < 2
+                    or cluster.mean(1).sum() < 2
+                    or cluster.mean() < 0.3
             ):
                 continue
 
@@ -623,7 +597,7 @@ class SNNBiclustering(TensorCom):
         ),
     )
     def _get_beta_from_factors(
-        self, X, missing_row, anchor_rows, anchor_cols, cluster_idx
+            self, X, missing_row, anchor_rows, anchor_cols, cluster_idx
     ):
         _anchor_rows = np.array(list(anchor_rows), dtype=int)
         _anchor_cols = np.array(list(anchor_cols), dtype=int)
@@ -649,7 +623,7 @@ class SNNBiclustering(TensorCom):
         train_error = self._train_error(X_als.T, y1, beta)
 
         return beta, u_rank.T, train_error
-    
+
     def _initialize(self, X: ndarray, missing_set: ndarray) -> Tuple[ndarray, ndarray]:
         # check and prepare data
         X = self._prepare_input_data(X, missing_set, 2)
@@ -658,7 +632,7 @@ class SNNBiclustering(TensorCom):
         self.feasible = np.empty(X.shape)
         self.feasible.fill(np.nan)
         return X, X_imputed
-    
+
     def _spectral_rank(self, s):
         """
         retain all singular values that compose at least (100*self.spectral_t)% spectral energy
@@ -666,7 +640,7 @@ class SNNBiclustering(TensorCom):
         if self.spectral_t == 1.0:
             rank = len(s)
         else:
-            total_energy = (s**2).cumsum() / (s**2).sum()
+            total_energy = (s ** 2).cumsum() / (s ** 2).sum()
             rank = list((total_energy > self.spectral_t)).index(True) + 1
         return rank
 
@@ -675,11 +649,10 @@ class SNNBiclustering(TensorCom):
         retain all singular values above optimal threshold as per Donoho & Gavish '14:
         https://arxiv.org/pdf/1305.5870.pdf
         """
-        omega = 0.56 * ratio**3 - 0.95 * ratio**2 + 1.43 + 1.82 * ratio
+        omega = 0.56 * ratio ** 3 - 0.95 * ratio ** 2 + 1.43 + 1.82 * ratio
         t = omega * np.median(s)
         rank = max(len(s[s > t]), 1)
         return rank
-
 
     def _train_error(self, X: ndarray, y: ndarray, beta: ndarray) -> float64:
         """
@@ -688,7 +661,7 @@ class SNNBiclustering(TensorCom):
         y_pred = X @ beta
         delta = np.linalg.norm(y_pred - y)
         ratio = delta / np.linalg.norm(y)
-        return ratio**2
+        return ratio ** 2
 
     def _subspace_inclusion(self, V1: ndarray, X2: ndarray) -> float64:
         """
@@ -696,10 +669,10 @@ class SNNBiclustering(TensorCom):
         """
         delta = (np.eye(V1.shape[1]) - (V1.T @ V1)) @ X2
         ratio = np.linalg.norm(delta) / np.linalg.norm(X2)
-        return ratio**2
+        return ratio ** 2
 
     def _isfeasible(
-        self, train_error: float64, subspace_inclusion_stat: float64
+            self, train_error: float64, subspace_inclusion_stat: float64
     ) -> bool:
         """
         check feasibility of prediction
@@ -710,7 +683,7 @@ class SNNBiclustering(TensorCom):
         # subspace test
         s_feasible = True if subspace_inclusion_stat <= self.subspace_eps else False
         return ls_feasible and s_feasible
-    
+
     def _train_error(self, X: ndarray, y: ndarray, beta: ndarray) -> float64:
         """
         compute (normalized) training error
@@ -718,4 +691,4 @@ class SNNBiclustering(TensorCom):
         y_pred = X @ beta
         delta = np.linalg.norm(y_pred - y)
         ratio = delta / np.linalg.norm(y)
-        return ratio**2
+        return ratio ** 2
