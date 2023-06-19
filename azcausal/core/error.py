@@ -107,8 +107,9 @@ class Placebo(Error):
         return np.sqrt((n - 1) / n) * np.std(estms, ddof=1)
 
     def evaluate(self, estm, others):
-        ret = super().evaluate(estm, others)
-        ret["placebo"] = np.mean(ret["estms"])
+        placebo = np.mean(others)
+        ret = super().evaluate(placebo , others)
+        ret["placebo"] = placebo
         return ret
 
 
