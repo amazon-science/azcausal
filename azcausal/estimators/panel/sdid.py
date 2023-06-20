@@ -4,6 +4,7 @@ import pandas as pd
 
 from azcausal.core.error import JackKnife
 from azcausal.core.estimator import Estimator
+from azcausal.core.plots import plot_hist_contr_treat
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify, Sampling
 from azcausal.estimators.panel.did import did_simple
 
@@ -91,18 +92,20 @@ class SDID(Estimator):
                                                                                  height_ratios=[4, 2],
                                                                                  width_ratios=[8.5, 1.5])
 
-        top_left.plot(data.index, data["T"], label="T", color="blue")
-        if sc:
-            top_left.plot(data.index, data["SC"], label="SC", color="red")
+        plot_hist_contr_treat(top_left, T=data["T"], CF=data["T'"])
 
-        top_left.set_xticklabels([])
-        top_left.axvline(start_time, color="black", alpha=0.3)
-
-        if trend:
-            top_left.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
-            for t, v in data.query("W == 1")["att"].items():
-                top_left.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
-                               length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
+        # top_left.plot(data.index, data["T"], label="T", color="blue")
+        # if sc:
+        #     top_left.plot(data.index, data["SC"], label="SC", color="red")
+        #
+        # top_left.set_xticklabels([])
+        # top_left.axvline(start_time, color="black", alpha=0.3)
+        #
+        # if trend:
+        #     top_left.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
+        #     for t, v in data.query("W == 1")["att"].items():
+        #         top_left.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
+        #                        length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
 
         def plot_arrow(ax, x, y, dy, **kwargs):
             ax.annotate("", xy=(x, y), xytext=(x, y + dy), arrowprops=dict(arrowstyle="<-", **kwargs))

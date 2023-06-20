@@ -289,6 +289,11 @@ class Panel:
         """
         return self.intervention.values.sum(axis=1) > 0
 
+    # ----------------------------------------------- INTERVENTIONS ---------------------------------------------------
+
+    def n_types_of_interventions(self):
+        return len(np.unique(self.intervention.values)) - 1
+
     # ----------------------------------------------- CONVENIENCE -----------------------------------------------------
 
     def copy(self):

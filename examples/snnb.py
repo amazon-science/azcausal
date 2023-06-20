@@ -2,7 +2,7 @@ from azcausal.core.error import Placebo
 from azcausal.core.panel import Panel
 from azcausal.core.parallelize import Pool
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.ssnb import SNNBiclustering
+from azcausal.estimators.panel.ssnb import SNNB
 from azcausal.util import to_matrix, zeros_like
 
 if __name__ == '__main__':
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     pnl = Panel(outcome, intervention)
 
     # initialize an estimator object, here difference in difference (did)
-    estimator = SNNBiclustering()
+    estimator = SNNB()
 
     # run the estimator
     estm = estimator.fit(pnl)
@@ -36,10 +36,10 @@ if __name__ == '__main__':
     estimator.plot(estm, title="CaliforniaProp99")
 
     # create a process pool for parallelization
-    pool = Pool(mode="processes", progress=True)
+    pool = Pool(progress=True)
 
     # run the error validation method
-    method = Placebo(n_samples=5)
+    method = Placebo(n_samples=31)
     err = estimator.error(estm, method, parallelize=pool)
 
     print("Standard Error (se):", err["se"])

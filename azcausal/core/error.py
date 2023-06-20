@@ -81,10 +81,10 @@ class JackKnife(Error):
 
 class Placebo(Error):
 
-    def __init__(self, n_samples=100, rng=RandomState(42), **kwargs) -> None:
+    def __init__(self, n_samples=100, random_state=RandomState(42), **kwargs) -> None:
         super().__init__(**kwargs)
         self.n_samples = n_samples
-        self.rng = rng
+        self.random_state = random_state
 
     def check(self, pnl):
         assert pnl.n_contr > pnl.n_treat, "The panel must have more control than treated units for Placebo."
@@ -94,7 +94,7 @@ class Placebo(Error):
         n_treat = pnl.n_treat
 
         for _ in range(self.n_samples):
-            placebo = self.rng.choice(np.arange(pnl.n_contr), size=n_treat, replace=False)
+            placebo = self.random_state.choice(np.arange(pnl.n_contr), size=n_treat, replace=False)
 
             Wp = np.zeros_like(outcome.values)
             Wp[:, placebo] = pnl.get("intervention", treat=True, to_numpy=True)
@@ -114,11 +114,11 @@ class Placebo(Error):
 
 class Bootstrap(Error):
 
-    def __init__(self, n_samples=100, rng=RandomState(42), mode="random", **kwargs) -> None:
+    def __init__(self, n_samples=100, random_state=RandomState(42), mode="random", **kwargs) -> None:
         super().__init__(**kwargs)
         self.n_samples = n_samples
         self.mode = mode
-        self.rng = rng
+        self.random_state = random_state
 
     def se(self, estms):
         n = len(estms)
@@ -132,16 +132,16 @@ class Bootstrap(Error):
         for k in range(self.n_samples):
 
             if self.mode == "random":
-                u = self.rng.choice(units, size=N, replace=True)
+                u = self.random_state.choice(units, size=N, replace=True)
             # see https://towardsdatascience.com/the-bayesian-bootstrap-6ca4a1d45148
             elif self.mode == "bayes":
                 alpha = np.full(N, 4.0)
                 p = np.random.dirichlet(alpha)
-                u = self.rng.choice(units, size=N, replace=True, p=p)
+                u = self.random_state.choice(units, size=N, replace=True, p=p)
             # sample from control and treatment independently
             elif self.mode == "stratified":
-                u_treat = self.rng.choice(intervention.columns[pnl.w], size=pnl.n_treat, replace=True)
-                u_contr = self.rng.choice(intervention.columns[~pnl.w], size=pnl.n_contr, replace=True)
+                u_treat = self.random_state.choice(intervention.columns[pnl.w], size=pnl.n_treat, replace=True)
+                u_contr = self.random_state.choice(intervention.columns[~pnl.w], size=pnl.n_contr, replace=True)
                 u = np.concatenate([u_treat, u_contr])
             else:
                 raise Exception(f"Unknown mode: {self.mode}. Available modes are `random`, `bayes`, and `stratified`.")
