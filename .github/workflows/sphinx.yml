@@ -14,6 +14,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - name: Install azcausal
+        run: pip install .
+      - name: Install Documentation dependency
+        run: pip install -r docs/requirements.txt
       - name: Run Jupyter Notebooks
         run: python docs/run_ipynb.py
       - uses: ammaraskar/sphinx-action@master
