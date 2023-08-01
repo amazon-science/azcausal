@@ -14,11 +14,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Set up Pandoc
-        run: sudo apt-get install -y pandoc
       - uses: ammaraskar/sphinx-action@master
         with:
           docs-folder: "docs/"
+          pre-build-command: >-
+            apt-get update && apt-get install -y pandoc
       - uses: actions/upload-artifact@v1
         with:
           name: DocumentationHTML
