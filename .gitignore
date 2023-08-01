@@ -4,6 +4,8 @@
 
 scratch/
 docs/build/*
+aws/azcausal-*
+
 *.csv
 *.parquet
 *.dta

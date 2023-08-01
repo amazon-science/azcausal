@@ -12,42 +12,42 @@ def data():
 
 
 def test_Y_shapes(data):
-    pnl = data.panel()
+    panel = data.panel()
 
-    pnl.outcome.loc[2001] = 0.0
-    pnl.outcome.loc[2002] = 0.0
+    panel.outcome.loc[2001] = 0.0
+    panel.outcome.loc[2002] = 0.0
 
-    pnl.intervention.loc[2001] = 0
-    pnl.intervention.loc[2001, "Wyoming"] = 1
-    pnl.intervention.loc[2002] = 0
+    panel.intervention.loc[2001] = 0
+    panel.intervention.loc[2001, "Wyoming"] = 1
+    panel.intervention.loc[2002] = 0
 
-    time_pre = pnl.time(pre=True)
+    time_pre = panel.time(pre=True)
     assert_almost_equal(np.arange(1970, 1989), time_pre)
 
-    time_post = pnl.time(post=True, trim=True)
+    time_post = panel.time(post=True, trim=True)
     assert_almost_equal(np.arange(1989, 2002), time_post)
 
-    time_post_no_trim = pnl.time(post=True)
+    time_post_no_trim = panel.time(post=True)
     assert_almost_equal(np.arange(1989, 2003), time_post_no_trim)
 
-    assert pnl.Y(pre=True).shape[1] == len(time_pre)
-    assert pnl.Y(post=True, trim=True).shape[1] == len(time_post)
+    assert panel.Y(pre=True).shape[1] == len(time_pre)
+    assert panel.Y(post=True, trim=True).shape[1] == len(time_post)
 
 
 def test_panel_dates(data):
-    pnl = data.panel()
+    panel = data.panel()
 
-    assert pnl.start == 1989
-    assert pnl.earliest_start == 1989
-    assert pnl.latest_start == 1989
+    assert panel.start == 1989
+    assert panel.earliest_start == 1989
+    assert panel.latest_start == 1989
 
-    pnl.outcome.loc[2020] = 0.0
-    pnl.intervention.loc[2020] = 0
-    pnl.intervention.loc[2020, "Wyoming"] = 1
+    panel.outcome.loc[2020] = 0.0
+    panel.intervention.loc[2020] = 0
+    panel.intervention.loc[2020, "Wyoming"] = 1
 
-    assert pnl.latest_end == 2020
-    assert pnl.earliest_end == 2000
-    assert pnl.end is None
+    assert panel.latest_end == 2020
+    assert panel.earliest_end == 2000
+    assert panel.end is None
 
 
 def test_replace_nan(data):
@@ -61,7 +61,3 @@ def test_replace_nan(data):
     assert (outcome == -1).values.sum() == 10
 
 
-def test_matrix_shapes(data):
-    pnl = data.panel()
-
-    print("sdfsf")

@@ -1,9 +1,9 @@
 import numpy as np
 
 
-def donors(pnl, n, method="rmse"):
-    Y = pnl.Y(pre=True, treat=True).mean(axis=0)
-    X = pnl.Y(pre=True, contr=True)
+def donors(panel, n, method="rmse"):
+    Y = panel.Y(pre=True, treat=True).mean(axis=0)
+    X = panel.Y(pre=True, contr=True)
 
     if method == "rmse":
         v = ((X - Y) ** 2).mean(axis=1) ** 0.5
@@ -17,8 +17,8 @@ def donors(pnl, n, method="rmse"):
 
     rank = np.argsort(v)
 
-    S = pnl.units(contr=True)[rank][:n]
-    T = pnl.units(treat=True)
+    S = panel.units(contr=True)[rank][:n]
+    T = panel.units(treat=True)
     units = np.concatenate([T, S])
 
-    return pnl[units]
+    return panel[units]

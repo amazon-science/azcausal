@@ -23,7 +23,7 @@ data = dict(
     keywords="causality, inference",
     packages=find_packages(include=['azcausal', 'azcausal.*']),
     install_requires=['pandas', 'scipy', 'tqdm', 'matplotlib', 'statsmodels', 'linearmodels', 'cachetools',
-                      'scikit-learn'],
+                      'scikit-learn', 'dill', 'joblib >= 1.3'],
     platforms='any',
     classifiers=[
         'Intended Audience :: Developers',

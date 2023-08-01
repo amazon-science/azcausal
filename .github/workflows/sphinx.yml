@@ -1,0 +1,26 @@
+
+name: Documentation
+
+on:
+
+  push:
+    branches: ["testing"]
+
+
+jobs:
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/"
+      - uses: actions/upload-artifact@v1
+        with:
+          name: DocumentationHTML
+          path: docs/build/html/

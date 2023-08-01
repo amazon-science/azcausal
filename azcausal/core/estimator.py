@@ -18,8 +18,17 @@ class Estimator(object):
         self.logger = logging.getLogger()
         self.random_state = random_state
 
-    def fit(self, pnl):
+    def fit(self, panel):
         pass
 
-    def error(self, estm, method, parallelize=Serial()):
-        return method.run(estm, "att", parallelize=parallelize)
+    def error(self, result, method, parallelize=Serial()):
+        return method.run(result, parallelize=parallelize)
+
+    def run(self, panel, error=None, parallelize=Serial()):
+        result = self.fit(panel)
+
+        if error is not None:
+            self.error(result, error, parallelize=parallelize)
+
+        return result
+

@@ -41,6 +41,10 @@ def zeros_like(df, **kwargs):
     return full_like(df, 0, **kwargs)
 
 
+def ones_like(df, **kwargs):
+    return full_like(df, 1, **kwargs)
+
+
 def to_matrix(df, index, cols, value, fillna=None):
     """
     This method takes a data frame and converts it to panel in the matrix format.
@@ -81,13 +85,30 @@ def to_matrices(df, index, cols, *values, fillna=None):
     return tuple([to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values])
 
 
-
 def to_balanced(dy):
     p = pd.MultiIndex.from_product(dy.index.levels, names=dy.index.names)
     return dy.reindex(p, fill_value=0)
 
 
-def stime(dy, time, fillna=None, dtype=None):
+def time_as_int(x):
+    assert x.isna().sum() == 0, "Only series with no nan values can be converted to integers."
+    return x.rank(method='dense', ascending=True).astype(int) - 1
+
+
+def treatment_from_intervention(df: pd.DataFrame,
+                                unit: str = "unit",
+                                intervention: str = "intervention"):
+    treat_units = set(df.query(f"{intervention} == 1")[unit])
+    return df[unit].isin(treat_units).astype(int)
+
+
+def intervention_from_outcome(outcome, time, units):
+    intervention = zeros_like(outcome)
+    intervention.loc[time:, intervention.columns.isin(units)] = 1
+    return intervention
+
+
+def time_to_intervention(dy, time, fillna=None, dtype=None):
     unit_to_start = dy.query("intervention == 1").groupby("unit")[time].min().to_frame("stime")
 
     dy = dy.merge(unit_to_start, on="unit", how="left")

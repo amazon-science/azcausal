@@ -5,30 +5,45 @@ from azcausal.core.error import Placebo, JackKnife, Bootstrap
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.did import DID, DIDRegressor, EventStudy
 
-import numpy as np
+
 @pytest.fixture
 def panel():
     return CaliforniaProp99().panel()
 
 
+@pytest.fixture
+def df():
+    return CaliforniaProp99().load()
+
+
 @pytest.mark.parametrize("did", [DID(), DIDRegressor()])
 def test_did(panel, did):
-    estm = did.fit(panel)
-    assert_almost_equal(-27.349111083614947, estm["att"])
+    result = did.fit(panel)
+    assert_almost_equal(-27.349111083614947, result["att"].value)
 
 
 @pytest.mark.parametrize("did", [DID(), DIDRegressor()])
 def test_did_error_no_fail(panel, did):
-    estm = did.fit(panel)
+    result = did.fit(panel)
 
-    did.error(estm, Placebo(n_samples=11))
-    did.error(estm, JackKnife())
-    did.error(estm, Bootstrap(n_samples=11))
+    did.error(result, Placebo(n_samples=11))
+    did.error(result, JackKnife())
+    did.error(result, Bootstrap(n_samples=11))
 
 
 def test_event_study(panel):
-    estm_did = DID().fit(panel)
-    estm_event = EventStudy(n_pre=0).fit(panel)
+    result_did = DID().fit(panel)
+    result_event = EventStudy(n_pre=0).fit(panel)
 
-    assert_almost_equal(estm_did["att"], estm_event["att"])
-    assert_almost_equal(estm_did["data"]["att"].dropna().values, estm_event["data"]["att"].values)
+    assert_almost_equal(result_did.effect.value, result_event.effect.value)
+
+    desired = result_did.effect.by_time.query("W == 1")["att"].values
+    actual = result_event.effect.by_time["att"].values
+
+    assert_almost_equal(actual, desired)
+
+
+def test_event_study_frame(df):
+    df = df.rename(columns=dict(Year="time", State="unit", PacksPerCapita="outcome", treated="intervention"))
+    result_event = EventStudy(n_pre=0).fit(df)
+    assert_almost_equal(result_event["att"].value, -27.349111083614947)

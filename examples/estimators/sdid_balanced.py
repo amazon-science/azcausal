@@ -19,21 +19,20 @@ if __name__ == '__main__':
     assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, intervention)
+    panel = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
 
     # run the estimator
-    estm = estimator.fit(pnl)
-    print("Average Treatment Effect on the Treated (ATT):", estm["att"])
+    result = estimator.fit(panel)
 
     # create a process pool for parallelization
     pool = Pool(mode="processes", progress=True)
 
     # run the error validation method
-    method = Placebo(n_samples=50)
-    err = estimator.error(estm, method, parallelize=pool)
+    method = Placebo(n_samples=11)
+    estimator.error(result, method, parallelize=pool)
 
-    print("Standard Error (se):", err["se"])
-    print("Error Confidence Interval (90%):", err["CI"]["90%"])
+    # print out information about the estimate
+    print(result.summary(title="CaliforniaProp99"))

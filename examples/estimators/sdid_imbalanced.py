@@ -1,8 +1,8 @@
 from azcausal.core.error import JackKnife
 from azcausal.core.panel import Panel
-from azcausal.util import zeros_like, to_matrix
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.sdid import SDID
+from azcausal.util import to_matrix, intervention_from_outcome
 
 if __name__ == '__main__':
 
@@ -18,26 +18,23 @@ if __name__ == '__main__':
     # the units that have been treated
     treat_units = list(df.query("treated == 1")["State"].unique())
 
-    # create the treatment matrix based on the information above
-    intervention = zeros_like(outcome)
-    intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
+    # create the intervention matrix
+    intervention = intervention_from_outcome(outcome, start_time, treat_units)
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, intervention)
+    panel = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
 
     # run the estimator
-    estm = estimator.fit(pnl)
-    print("Average Treatment Effect on the Treated (ATT):", estm["att"])
+    result = estimator.fit(panel)
 
     # show the results in a plot
-    estimator.plot(estm, trend=True, sc=True)
+    estimator.plot(result, CF=True, C=True)
 
     # run an error validation method
-    method = JackKnife()
-    err = estimator.error(estm, method)
+    estimator.error(result, JackKnife())
 
-    print("Standard Error (se):", err["se"])
-    print("Error Confidence Interval (90%):", err["CI"]["90%"])
+    # print out information about the estimate
+    print(result.summary(title="CaliforniaProp99"))

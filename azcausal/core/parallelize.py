@@ -3,6 +3,7 @@ from multiprocessing import Pool as ProcessPool
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
@@ -22,17 +23,23 @@ class Serial(Parallelize):
         super().__init__()
         self.progress = progress
 
-    def run(self, func, iterable):
+    def run(self, func, iterable, total=None):
+
         if self.progress:
+
+            if total is None:
+                iterable = list(iterable)
+                total = len(iterable)
+
             iterable = list(iterable)
-            return [func(args) for args in tqdm(iterable, total=len(iterable))]
+            return [func(args) for args in tqdm(iterable, total=total)]
         else:
             return [func(args) for args in iterable]
 
 
 class Pool(Parallelize):
 
-    def __init__(self, pool=None, mode="processes", max_workers=None, progress=False) -> None:
+    def __init__(self, pool=None, mode="thread", max_workers=None, progress=False) -> None:
         super().__init__()
 
         if pool is None:
@@ -40,18 +47,45 @@ class Pool(Parallelize):
             if max_workers is None:
                 max_workers = cpu_count() - 1
 
-            if mode == "processes":
+            if mode.startswith("process"):
                 pool = ProcessPool(max_workers)
-            elif mode == "threads":
+            elif mode.startswith("thread"):
                 pool = ThreadPool(max_workers)
+            else:
+                raise Exception("Unknown mode. Either `process` or `thread`.")
 
         self.pool = pool
         self.progress = progress
 
-    def run(self, func, iterable):
+    def run(self, func, iterable, total=None):
         if self.progress:
-            iterable = list(iterable)
+
+            if total is None:
+                iterable = list(iterable)
+                total = len(iterable)
+
             futures = self.pool.imap(func, iterable)
-            return [e for e in tqdm(futures, total=len(iterable))]
+            return [e for e in tqdm(futures, total=total)]
         else:
             return self.pool.map(func, iterable)
+
+
+class Joblib(Parallelize):
+
+    def __init__(self, n_jobs=-2, prefer="threads", progress=False) -> None:
+        super().__init__()
+        self.pool = Parallel(n_jobs=n_jobs, prefer=prefer, return_as="generator")
+        self.progress = progress
+
+    def run(self, func, iterable, total=None):
+        if self.progress:
+
+            if total is None:
+                iterable = list(iterable)
+                total = len(iterable)
+
+            futures = self.pool(delayed(func)(e) for e in iterable)
+
+            return [e for e in tqdm(futures, total=total)]
+        else:
+            return list(self.pool(delayed(func)(e) for e in iterable))

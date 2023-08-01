@@ -22,43 +22,45 @@ def sdid():
 
 
 def test_california_correct(sdid, data):
-    pnl = data.panel()
-    estm = sdid.fit(pnl)
+    panel = data.panel()
 
-    assert_almost_equal(77.3493584873376392, estm["solvers"]["lambd"]["f"])
+    result = sdid.fit(panel)
+    effect = result.effect
+
+    assert_almost_equal(77.3493584873376392, effect["solvers"]["lambd"]["f"])
     assert_almost_equal([0.3664706319364642, 0.2064530505601764, 0.4270763175033594],
-                        estm["solvers"]["lambd"]["x"][-3:])
-    assert estm["solvers"]["lambd"]["iter"] == 5
+                        effect["solvers"]["lambd"]["x"][-3:])
+    assert effect["solvers"]["lambd"]["iter"] == 5
 
-    assert_almost_equal(9.373915017, estm["solvers"]["omega"]["f"])
+    assert_almost_equal(9.373915017, effect["solvers"]["omega"]["f"])
     assert_almost_equal([0.033569113191, 0.036667084791, 0.001386441800],
-                        estm["solvers"]["omega"]["x"][-3:])
-    assert estm["solvers"]["omega"]["iter"] == 10000
+                        effect["solvers"]["omega"]["x"][-3:])
+    assert effect["solvers"]["omega"]["iter"] == 10000
 
-    assert_almost_equal(-15.6038278727338469, estm["att"])
+    assert_almost_equal(-15.6038278727338469, effect["att"])
 
 
 def test_jackknife_correct(sdid, data):
-    pnl = data.panel()
+    panel = data.panel()
     # we need at least two treatment units for jackknife
-    pnl.intervention["Wyoming"].loc[1989:] = 1
+    panel.intervention["Wyoming"].loc[1989:] = 1
 
-    estm = sdid.fit(pnl)
-    assert_almost_equal(-4.1538623012790161, estm["att"])
+    result = sdid.fit(panel)
+    assert_almost_equal(-4.1538623012790161, result["att"].value)
 
-    error = sdid.error(estm, JackKnife())
-    assert_almost_equal(17.867241960405, error["se"])
+    sdid.error(result, JackKnife())
+    assert_almost_equal(17.867241960405, result["att"].se)
 
 
 def test_placebo_no_fail(sdid, data):
-    pnl = data.panel()
-    estm = sdid.fit(pnl)
+    panel = data.panel()
+    estm = sdid.fit(panel)
     sdid.error(estm, Placebo(n_samples=2))
 
 
 def test_bootstrap_no_fail(sdid, data):
-    pnl = data.panel()
-    estm = sdid.fit(pnl)
+    panel = data.panel()
+    estm = sdid.fit(panel)
     sdid.error(estm, Bootstrap(n_samples=2))
 
 
@@ -89,21 +91,23 @@ def data_generator():
 def test_correctness_comprehensive(sdid, df, correct):
     outcome = to_matrix(df, "Year", "State", "PacksPerCapita")
     intervention = to_matrix(df, "Year", "State", "treated")
-    pnl = Panel(outcome, intervention)
+    panel = Panel(outcome, intervention)
 
-    estm = sdid.fit(pnl)
-    assert_almost_equal(correct["tau_hat"], estm["att"])
+    result = sdid.fit(panel)
+    effect = result.effect
 
-    assert_almost_equal(correct["lambd"], estm["lambd"])
-    assert_almost_equal(correct["f_min_lambd"], estm["solvers"]["lambd"]["f"].min())
+    assert_almost_equal(correct["tau_hat"], effect["att"])
 
-    assert_almost_equal(correct["omega"], estm["omega"])
-    assert_almost_equal(correct["f_min_omega"], estm["solvers"]["omega"]["f"].min())
+    assert_almost_equal(correct["lambd"], effect["lambd"])
+    assert_almost_equal(correct["f_min_lambd"], effect["solvers"]["lambd"]["f"].min())
 
-    error = sdid.error(estm, JackKnife())
+    assert_almost_equal(correct["omega"], effect["omega"])
+    assert_almost_equal(correct["f_min_omega"], effect["solvers"]["omega"]["f"].min())
 
-    if pnl.n_treat > 1:
-        assert_almost_equal(correct["se"], error["se"])
+    sdid.error(result, JackKnife())
+
+    if panel.n_treat > 1:
+        assert_almost_equal(correct["se"], result.effect["se"])
 
 
 # @pytest.mark.parametrize("method", [Placebo(n_samples=5000),
@@ -114,10 +118,10 @@ def test_correctness_comprehensive(sdid, df, correct):
 #     with open(join(dirname(abspath(__file__)), 'sdid', 'correct' f'{method.__class__.__name__.lower()}.pkl'), 'rb') as f:
 #         correct = pickle.load(f)
 #
-#     pnl = data.panel()
-#     pnl.treatment["Wyoming"].loc[1989:] = 1
+#     panel = data.panel()
+#     panel.treatment["Wyoming"].loc[1989:] = 1
 #
-#     estm = sdid.fit(pnl)
+#     estm = sdid.fit(panel)
 #     error = sdid.error(estm, method, parallelize=Joblib())
 #
 #     import matplotlib.pyplot as plt

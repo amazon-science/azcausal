@@ -1,11 +1,9 @@
-from azcausal.core.error import JackKnife
-from azcausal.core.panel import Panel
-from azcausal.estimators.panel.did import EventStudy, DID
-from azcausal.util import zeros_like, to_matrix
-from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.sdid import SDID
-
 import numpy as np
+
+from azcausal.core.panel import Panel
+from azcausal.data import CaliforniaProp99
+from azcausal.estimators.panel.did import EventStudy, DID
+from azcausal.util import to_matrix, intervention_from_outcome
 
 if __name__ == '__main__':
 
@@ -21,27 +19,28 @@ if __name__ == '__main__':
     # the units that have been treated
     treat_units = list(df.query("treated == 1")["State"].unique())
 
-    # create the treatment matrix based on the information above
-    intervention = zeros_like(outcome)
-    intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
+    # create the intervention matrix
+    intervention = intervention_from_outcome(outcome, start_time, treat_units)
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, intervention)
+    panel = Panel(outcome, intervention)
 
     print("Event Study with `pre=0` should always match DiD (but provide impact over time)")
 
-    estm_did = DID().fit(pnl)
-    print("[DID] Average Treatment Effect on the Treated (ATT):", estm_did["att"])
+    did = DID().fit(panel)
+    print("[DID] Average Treatment Effect on the Treated (ATT):", did["att"].value)
 
-    estm_event = EventStudy(n_pre=0).fit(pnl)
-    print("[Event Study] Average Treatment Effect on the Treated (ATT):", estm_event["att"])
+    event = EventStudy(n_pre=0).fit(panel)
+    print("[Event Study] Average Treatment Effect on the Treated (ATT):", did["att"].value)
 
-    delta = (estm_did["data"]["att"].dropna().values - estm_event["data"]["att"].values)
-    print("Difference in Estimations", np.abs(delta).sum())
+    desired = did.effect.by_time.query("W == 1")["att"].values
+    actual = event.effect.by_time["att"].values
+    delta = np.abs(desired - actual)
+    print("Difference in Estimations", delta.sum())
 
     # now perform the event study
     estimator = EventStudy(n_pre=None, exclude=-1)
-    estm = estimator.fit(pnl)
+    result = estimator.fit(panel)
 
     # show the results in a plot
-    estimator.plot(estm)
+    estimator.plot(result)

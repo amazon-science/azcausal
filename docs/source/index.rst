@@ -1,20 +1,39 @@
-.. azcausal documentation master file, created by
-   sphinx-quickstart on Tue Jun  6 16:53:18 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
 
-Welcome to azcausal's documentation!
+
+Home
 ====================================
 
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :hidden:
+
+   self
+
+.. toctree::
+   :name: Introduction
+   :caption: Introduction
+   :maxdepth: 1
+   :hidden:
+
+   introduction/index
 
 
 
-Indices and tables
-==================
+.. toctree::
+   :name: Estimators
+   :caption: Estimators
+   :maxdepth: 1
+   :hidden:
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   estimators/index
+
+
+.. toctree::
+   :name: Tutorials
+   :caption: Tutorials
+   :maxdepth: 1
+   :hidden:
+
+   tutorials/index
+
+

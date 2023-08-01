@@ -54,13 +54,13 @@ Usage
     intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
 
     # create a panel object to access observations conveniently
-    pnl = Panel(outcome, intervention)
+    panel = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
 
     # run the estimator
-    estm = estimator.fit(pnl)
+    estm = estimator.fit(panel)
     print("Average Treatment Effect on the Treated (ATT):", estm["att"])
 
     # show the results in a plot
