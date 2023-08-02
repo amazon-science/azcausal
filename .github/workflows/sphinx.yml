@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Install azcausal
         run: pip install .
-      - name: Install Documentation dependency
+      - name: Install Documentation Dependencies
         run: pip install -r docs/requirements.txt
       - name: Run Jupyter Notebooks
         run: python docs/run_ipynb.py
