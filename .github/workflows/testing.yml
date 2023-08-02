@@ -13,7 +13,7 @@ jobs:
           python-version: '3.11'
       - name: Install azcausal
         run: |
-          pip install .
+          pip install '.[core,snnb]'
           rm -rf azcausal
       - name: Install pytest
         run: |

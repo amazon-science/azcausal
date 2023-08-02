@@ -1,11 +1,14 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from linearmodels import PanelOLS
+from linearmodels.panel.utility import AbsorbingEffectError
 from matplotlib import pyplot as plt
 
+from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
-from azcausal.util import stime
+from azcausal.core.panel import Panel
+from azcausal.core.result import Result
+from azcausal.util import time_to_intervention, time_as_int, treatment_from_intervention
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -48,13 +51,13 @@ def did_simple(pre_contr, post_contr, pre_treat, post_treat):
 
 class DID(Estimator):
 
-    def fit(self, pnl, lambd=None):
+    def fit(self, panel, lambd=None):
 
         # get the outcome values pre and post and contr and treat in a block each
-        Y_pre_treat, Y_post_treat, Y_pre_contr, Y_post_contr = pnl.Y_as_block(trim=True)
+        Y_pre_treat, Y_post_treat, Y_pre_contr, Y_post_contr = panel.Y_as_block(trim=True)
 
         # lambda can be set to define the weights in pre - otherwise it will be simply uniform
-        m = pnl.n_pre
+        m = panel.n_pre
         if lambd is None:
             lambd = np.full(m, 1 / m)
 
@@ -71,36 +74,34 @@ class DID(Estimator):
         # finally the difference in difference
         did = did_simple(pre_contr, post_contr, pre_treat, post_treat)
 
-        # create the data on which sdid made the decision
-        W = (pnl.time() >= pnl.start).astype(int)
-        T = pnl.Y(treat=True).mean(axis=0)
-        C = pnl.Y(contr=True).mean(axis=0)
+        # create the data based on which did made the decision
+        W = (panel.time() >= panel.start).astype(int)
+        T = panel.Y(treat=True).mean(axis=0)
+        C = panel.Y(contr=True).mean(axis=0)
         att = (Y_post_treat.mean(axis=0) - pre_treat) - (Y_post_contr.mean(axis=0) - pre_contr)
 
         # prepare the data provided as output
-        data = pd.DataFrame(dict(time=pnl.time(), C=C, T=T, W=W))
-        data.loc[W == 0, "lambd"] = lambd
-        data.loc[W == 1, "att"] = att
-        data["T'"] = data["T"] - data["att"].fillna(0.0)
-        data = data.set_index("time")
+        by_time = pd.DataFrame(dict(time=panel.time(), C=C, T=T, W=W))
+        by_time.loc[W == 0, "lambd"] = lambd
+        by_time.loc[W == 1, "att"] = att
+        by_time["CF"] = by_time["T"] - by_time["att"].fillna(0.0)
+        by_time = by_time.set_index("time")
 
-        return dict(name="did", estimator=self, panel=pnl, data=data, **did)
+        att = Effect(did["att"], observed=did["post_treat"], by_time=by_time, data=did, name="ATT")
+        return Result(dict(att=att), data=panel, estimator=self)
 
-    def plot(self, estm, title=None, trend=True, C=True, show=True):
+    def plot(self, result, title=None, CF=True, C=True, show=True):
 
-        data = estm["data"]
+        data = result.effect.by_time
 
         fig, ax = plt.subplots(1, 1, figsize=(12, 4))
 
         ax.plot(data.index, data["T"], label="T", color="blue")
-        if C:
+        if C is not None:
             ax.plot(data.index, data["C"], label="C", color="red")
 
-        if trend:
-            ax.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
-            for t, v in data.query("W == 1")["att"].items():
-                ax.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
-                         length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
+        if CF is not None:
+            ax.plot(data.index, data["CF"], "--", color="blue", alpha=0.5)
 
         pre = data.query("W == 0")
         start_time = pre.index.max()
@@ -130,19 +131,35 @@ def did_regr(dy):
         A data frame with the index (unit, time) and the columns outcome and intervention.
 
     """
+    dy = dy.reset_index().set_index(["unit", "time"])
 
     # the simple formula to calculate DiD
     formula = 'outcome ~ intervention + EntityEffects + TimeEffects'
-    res = PanelOLS.from_formula(formula=formula, data=dy).fit(low_memory=True)
-    # res = smf.ols(formula='outcome ~ intervention + C(unit) + C(time)', data=dy.reset_index()).fit()
+    try:
+        res = PanelOLS.from_formula(formula=formula, data=dy).fit(low_memory=True)
+        # res = smf.ols(formula='outcome ~ intervention + C(unit) + C(time)', data=dy.reset_index()).fit()
 
-    return dict(att=res.params["intervention"], se=res.std_errors["intervention"])
+        att = res.params["intervention"]
+        se = res.std_errors["intervention"]
+
+    except AbsorbingEffectError:
+        att, se = 0.0, 0.0
+
+    return att, se
 
 
 class DIDRegressor(Estimator):
-    def fit(self, pnl):
-        dy = pnl.to_frame(index=True)
-        return dict(estimator=self, panel=pnl, **did_regr(dy))
+    def fit(self, panel):
+        # for the regression we need directly the data frame
+        dy = panel.to_frame(index=False) if isinstance(panel, Panel) else panel
+
+        # do the regression and get the treatment effect with se
+        att, se = did_regr(dy)
+        treated = dy.query("intervention == 1")
+        observed = treated["outcome"].mean()
+
+        att = Effect(att, se=se, observed=observed, multiplier=len(treated), name="ATT")
+        return Result(dict(att=att), data=panel, estimator=self)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -167,7 +184,7 @@ def did_event_study(df, n_pre=None, exclude=-1):
     """
 
     # get for each entry the time to intervention (starting time, stime)
-    y = stime(df, "rtime")
+    y = time_to_intervention(df, "itime")
 
     # now find all time periods to be considered
     yp = y.dropna().unique()
@@ -179,7 +196,8 @@ def did_event_study(df, n_pre=None, exclude=-1):
         yp = yp[yp != exclude]
 
     # get the intervention values for regression (basically dummy variables)
-    interventions = np.column_stack([y.values == v for v in yp])
+    xp = df['intervention'].values
+    interventions = np.column_stack([(y.values == v) if v < 0 else (y.values == v) & (xp != 0) for v in yp])
     labels = [f"t_{v}" for v in yp.astype(int)]
 
     # create the data frame to be fit by the regression package
@@ -188,7 +206,7 @@ def did_event_study(df, n_pre=None, exclude=-1):
 
     # solve the regression problem
     formula = f'outcome ~ {" + ".join([f"`{e}`" for e in labels])} + EntityEffects + TimeEffects'
-    res = PanelOLS.from_formula(formula=formula, data=dx).fit(low_memory=True)
+    regr = PanelOLS.from_formula(formula=formula, data=dx).fit(low_memory=True)
 
     # regression using statsmodel and not linearmodels (deprecated)
     # res = smf.ols(formula=f'outcome ~ {" + ".join(labels)} + C(unit) + C(time)', data=dx.reset_index()).fit()
@@ -196,14 +214,15 @@ def did_event_study(df, n_pre=None, exclude=-1):
 
     # create the output data
     prefix = "t_"
-    data = pd.DataFrame(dict(att=res.params, se=res.std_errors))
-    data = data.loc[data.index.str.startswith(prefix)]
-    data.index = pd.Index([int(s[len(prefix):]) for s in data.index], name="time", dtype=int)
-    data["intervention"] = (data.index >= 0).astype(int)
+    by_time = pd.DataFrame(dict(att=regr.params, se=regr.std_errors))
+    by_time = by_time.loc[by_time.index.str.startswith(prefix)]
+    by_time.index = pd.Index([int(s[len(prefix):]) for s in by_time.index], name="time", dtype=int)
+    by_time["intervention"] = (by_time.index >= 0).astype(int)
 
-    att = data.query("intervention == 1")["att"].mean()
+    dz = by_time.query("intervention == 1")["att"]
+    att, se = dz.mean(), dz.std(ddof=1)
 
-    return dict(name="event_study", res=res, att=att, data=data)
+    return att, se, by_time, regr
 
 
 class EventStudy(Estimator):
@@ -213,20 +232,33 @@ class EventStudy(Estimator):
         self.n_pre = n_pre
         self.exclude = exclude
 
-    def fit(self, pnl):
-        # since we use regression create the data frame from the panel
-        dy = pnl.to_frame(index=True, treatment=True)
-        out = did_event_study(dy, n_pre=self.n_pre, exclude=self.exclude)
-        out["estimator"] = self
-        return out
+    def fit(self, panel):
 
-    def plot(self, estm, show=True, ax=None):
-        data = estm["data"]
+        # since we use regression create the data frame from the panel (if not directly provided)
+        dy = panel
+        if not isinstance(panel, pd.DataFrame):
+            dy = panel.to_frame()
+
+        # add columns to have time as integer and whether a unit is treated (at least one intervention) or not
+        dz = dy.dropna()
+        dz = dz.assign(treatment=treatment_from_intervention(dy),
+                       itime=time_as_int(dy["time"]))
+        dz = dz.sort_values("itime").reset_index().set_index(["unit", "time"])
+
+        att, se, by_time, regr = did_event_study(dz, n_pre=self.n_pre, exclude=self.exclude)
+
+        dx = dz.query("intervention == 1")
+        att = Effect(att, se=se, observed=dx["outcome"].mean(), multiplier=len(dx), by_time=by_time,
+                     data=dict(regr=regr), name="ATT")
+        return Result(dict(att=att), data=panel, estimator=self)
+
+    def plot(self, result, show=True, ax=None):
+        data = result.effect.by_time
 
         if ax is None:
             _, ax = plt.subplots(1, 1, figsize=(12, 4))
 
-        ax.errorbar(data.index, data.att, yerr=data.se, fmt='-')
+        ax.errorbar(data.index, data["att"], yerr=data.se, fmt='-')
         ax.axvline(-0.5, color="red", alpha=0.5)
         ax.set_xlabel("Time")
         ax.set_ylabel("DID")

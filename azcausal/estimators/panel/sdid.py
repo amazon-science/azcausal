@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from azcausal.core.effect import Effect
 from azcausal.core.error import JackKnife
 from azcausal.core.estimator import Estimator
-from azcausal.core.plots import plot_hist_contr_treat
+from azcausal.core.result import Result
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify, Sampling
 from azcausal.estimators.panel.did import did_simple
 
@@ -25,10 +26,10 @@ class SDID(Estimator):
         else:
             self.solver = solver
 
-    def fit(self, pnl, lambd=None, omega=None, optimize=True):
+    def fit(self, panel, lambd=None, omega=None, optimize=True):
 
-        Y_pre_treat, Y_post_treat, Y_pre_contr, Y_post_contr = pnl.Y_as_block(trim=True)
-        (n_pre, n_post), (n_contr, n_treat) = pnl.counts()
+        Y_pre_treat, Y_post_treat, Y_pre_contr, Y_post_contr = panel.Y_as_block(trim=True)
+        (n_pre, n_post), (n_contr, n_treat) = panel.counts()
 
         noise = np.diff(Y_pre_contr, axis=1).std(ddof=1)
 
@@ -65,26 +66,33 @@ class SDID(Estimator):
         Y_avg_post_treat = Y_post_treat.mean(axis=0)
         att = (Y_avg_post_treat - pre_treat) - (Y_post_synth - pre_sc)
 
-        W = (pnl.time() >= pnl.start).astype(int)
-        T = pnl.Y(treat=True).mean(axis=0)
-        SC = pnl.Y(contr=True).T @ omega
+        W = (panel.time() >= panel.start).astype(int)
+        T = panel.Y(treat=True).mean(axis=0)
+        SC = panel.Y(contr=True).T @ omega
 
         # create the data on which sdid made the decision
-        data = pd.DataFrame(dict(time=pnl.time(), SC=SC, T=T, W=W))
-        data.loc[W == 0, "lambd"] = lambd
-        data.loc[W == 1, "att"] = att
-        data["T'"] = data["T"] - data["att"].fillna(0.0)
-        data = data.set_index("time")
+        by_time = pd.DataFrame(dict(time=panel.time(), SC=SC, T=T, W=W))
+        by_time.loc[W == 0, "lambd"] = lambd
+        by_time.loc[W == 1, "att"] = att
+        by_time["CF"] = by_time["T"] - by_time["att"].fillna(0.0)
+        by_time = by_time.set_index("time")
 
-        return dict(name="sdid", estimator=self, panel=pnl, data=data, lambd=lambd,
-                    omega=omega, noise=noise, solvers=solvers, **did)
+        data = dict(lambd=lambd, omega=omega, noise=noise, solvers=solvers, **did)
 
-    def error(self, estm, method, **kwargs):
-        return method.run(estm, "att", f_estimate=SDIDEstimationFunction(type(method) != JackKnife), **kwargs)
+        att = Effect(did["att"], observed=did["post_treat"], multiplier=panel.n_interventions(), by_time=by_time, data=data, name="ATT")
+        return Result(dict(att=att), data=panel, estimator=self)
 
-    def plot(self, estm, title=None, trend=False, sc=True, show=True):
+    def refit(self, result, optimize=True, low_memory=False):
+        return SDIDRun(result, optimize=optimize, low_memory=low_memory)
 
-        data, lambd, omega = estm["data"], estm["lambd"], estm["omega"]
+    def error(self, result, method, **kwargs):
+        f_estimate = self.refit(result, optimize=type(method) != JackKnife, low_memory=True)
+        return method.run(result, f_estimate=f_estimate, **kwargs)
+
+    def plot(self, result, title=None, CF=False, C=True, show=True):
+
+        effect = result.effect
+        data, lambd, omega = effect.by_time, effect["lambd"], effect["omega"]
         start_time = data.query("W == 0").index.max()
 
         fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2,
@@ -93,26 +101,23 @@ class SDID(Estimator):
                                                                                  width_ratios=[8.5, 1.5])
 
         top_left.plot(data.index, data["T"], label="T", color="blue")
-        if sc:
+        if C:
             top_left.plot(data.index, data["SC"], label="SC", color="red")
 
         top_left.set_xticklabels([])
         top_left.axvline(start_time, color="black", alpha=0.3)
 
-        if trend:
-            top_left.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
-            for t, v in data.query("W == 1")["att"].items():
-                top_left.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
-                               length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
+        if CF:
+            top_left.plot(data.index, data["CF"], "--", color="blue", alpha=0.5)
 
         def plot_arrow(ax, x, y, dy, **kwargs):
             ax.annotate("", xy=(x, y), xytext=(x, y + dy), arrowprops=dict(arrowstyle="<-", **kwargs))
 
-        plot_arrow(top_right, 1, estm["pre_contr"], estm["delta_contr"], color="red", lw=2)
-        plot_arrow(top_right, 2, estm["pre_treat"], estm["delta_treat"], color="blue", lw=2)
-        plot_arrow(top_right, 3, estm["pre_treat"], estm["att"], color="black", lw=2)
+        plot_arrow(top_right, 1, effect["pre_contr"], effect["delta_contr"], color="red", lw=2)
+        plot_arrow(top_right, 2, effect["pre_treat"], effect["delta_treat"], color="blue", lw=2)
+        plot_arrow(top_right, 3, effect["pre_treat"], effect["att"], color="black", lw=2)
 
-        if sc:
+        if C:
             top_right.set_xlim((0.5, 3.5))
         else:
             top_right.set_xlim((1.5, 3.5))
@@ -151,26 +156,35 @@ class SDID(Estimator):
         return fig
 
 
-class SDIDEstimationFunction(object):
+class SDIDRun:
 
-    def __init__(self, optimize=True) -> None:
+    def __init__(self, result, optimize=True, low_memory=False) -> None:
+        self.f_estimate = result.estimator.fit
+
+        effect = result.effect
+        self.omega = {u: o for u, o in zip(result.panel.units(contr=True), effect['omega'])}
+        self.lambd = effect['lambd']
+
+        self.low_memory = low_memory
         self.optimize = optimize
 
-    def args(self, estm, pnl, value):
-        omega = fix_omega(estm["panel"], estm["omega"], pnl)
-        return [estm["estimator"], pnl, estm["lambd"], omega, value]
+    def __call__(self, panel):
+        omega = fix_omega(self.omega, panel)
+        result = self.f_estimate(panel, lambd=self.lambd, omega=omega, optimize=self.optimize)
 
-    def run(self, args) -> None:
-        estimator, pnl, lambd, omega, value = args
-        return estimator.fit(pnl, lambd=lambd, omega=omega, optimize=self.optimize)[value]
+        # only keep the effects of the result (not the data)
+        if self.low_memory:
+            result = Result(result.effects)
+
+        return result
 
 
-def fix_omega(pnl, omega, npnl):
+def fix_omega(omega, new_panel):
+    omega = np.array([omega.get(u, 0.0) for u in new_panel.units(contr=True)])
+
     if omega.sum() > 0:
-        m = {u: o for u, o in zip(pnl.units(contr=True), omega)}
-        omega = np.array([m[u] for u in npnl.units(contr=True)])
         omega = omega / omega.sum()
         return omega
     else:
-        m = pnl.n_units(contr=True)
+        m = new_panel.n_units(contr=True)
         return np.full(m, 1 / m)

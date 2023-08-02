@@ -2,55 +2,54 @@ from abc import abstractmethod
 
 import numpy as np
 import pandas as pd
-import scipy
 from numpy.random import RandomState
 
 from azcausal.core.panel import Panel
 from azcausal.core.parallelize import Serial
-from azcausal.util import wrap_yield
-
-
-class DefaultEstimationFunction(object):
-
-    def args(self, estm, pnl, value):
-        return [estm["estimator"], pnl, value]
-
-    def run(self, args) -> None:
-        estimator, pnl, value = args
-        return estimator.fit(pnl)[value]
 
 
 class Error(object):
 
-    def run(self, estm, value, f_estimate=DefaultEstimationFunction(), parallelize=Serial()):
+    def __init__(self, random_state=RandomState(42), n_samples=None) -> None:
+        super().__init__()
+        self.n_samples = n_samples
+        self.random_state = random_state
 
-        pnl = estm["panel"]
-        self.check(pnl)
+    def run(self, result, f_estimate=None, panel=None, parallelize=Serial(), inplace=True):
 
-        iterable = wrap_yield(self.generate(pnl), lambda x: f_estimate.args(estm, x, value))
-        estms = parallelize(f_estimate.run, iterable)
+        if f_estimate is None:
+            f_estimate = result.estimator.fit
 
-        if len(estms) > 0:
-            return self.evaluate(estm[value], estms)
+        if panel is None:
+            panel = result.panel
+        self.check(panel)
 
-    def evaluate(self, estm, others):
-        se = self.se(others)
+        # do the runs (supports parallelization)
+        runs = parallelize(f_estimate, self.generate(panel))
 
-        res = dict(estms=others, se=se)
+        # the standard deviations for each effect
+        se = dict()
 
-        ci = dict()
-        for alpha in [90, 95, 99]:
-            ci[f"{alpha}%"] = scipy.stats.norm.interval(alpha / 100, loc=estm, scale=se)
+        # calculate the standard error for each effect
+        for effect in result.effects.keys():
 
-        res["CI"] = ci
+            # get the actually estimates
+            values = [run[effect].value for run in runs if run[effect].value is not None]
+            if len(values) > 0:
+                # and set the corresponding standard error
+                se[effect] = self.se(values)
 
-        return res
+        if result and inplace:
+            for name, se in se.items():
+                result[name].se = se
 
-    def check(self, pnl):
+        return se, runs
+
+    def check(self, panel):
         return True
 
     @abstractmethod
-    def generate(self, pnl):
+    def generate(self, panel):
         pass
 
     @abstractmethod
@@ -60,91 +59,106 @@ class Error(object):
 
 class JackKnife(Error):
 
-    def generate(self, pnl):
-        units = pnl.units()
-        n = len(units)
-        outcome = pnl.outcome
-        intervention = pnl.intervention
+    def generate(self, panel):
+        n = panel.n_units()
 
         for k in range(n):
-            u = units[k]
+            p = panel.iloc[:, np.delete(np.arange(n), k)]
 
-            pnl = Panel(outcome.drop(columns=[u]), intervention.drop(columns=[u]))
+            if p.n_treat > 0:
+                yield p
 
-            if pnl.n_treat > 0:
-                yield pnl
-
-    def se(self, estms):
-        n = len(estms)
-        return np.sqrt(((n - 1) / n) * (n - 1) * np.var(estms, ddof=1))
+    def se(self, values):
+        n = len(values)
+        return np.sqrt(((n - 1) / n) * (n - 1) * np.var(values, ddof=1))
 
 
 class Placebo(Error):
 
-    def __init__(self, n_samples=100, random_state=RandomState(42), **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.n_samples = n_samples
-        self.random_state = random_state
+    def __init__(self, n_samples=100, **kwargs) -> None:
+        super().__init__(n_samples=n_samples, **kwargs)
 
-    def check(self, pnl):
-        assert pnl.n_contr > pnl.n_treat, "The panel must have more control than treated units for Placebo."
+    def check(self, panel):
+        assert panel.n_contr > panel.n_treat, "The panel must have more control than treated units for Placebo."
 
-    def generate(self, pnl):
-        outcome = pnl.get("outcome", contr=True)
-        n_treat = pnl.n_treat
+    def generate(self, panel):
+        outcome = panel.get("outcome", contr=True)
+        n_treat = panel.n_treat
 
         for _ in range(self.n_samples):
-            placebo = self.random_state.choice(np.arange(pnl.n_contr), size=n_treat, replace=False)
+            placebo = self.random_state.choice(np.arange(panel.n_contr), size=n_treat, replace=False)
 
             Wp = np.zeros_like(outcome.values)
-            Wp[:, placebo] = pnl.get("intervention", treat=True, to_numpy=True)
+            Wp[:, placebo] = panel.get("intervention", treat=True, to_numpy=True)
             intervention = pd.DataFrame(Wp, index=outcome.index, columns=outcome.columns)
 
             yield Panel(outcome, intervention)
 
-    def se(self, estms):
-        n = len(estms)
-        return np.sqrt((n - 1) / n) * np.std(estms, ddof=1)
-
-    def evaluate(self, estm, others):
-        ret = super().evaluate(estm, others)
-        ret["placebo"] = np.mean(others)
-        return ret
+    def se(self, values):
+        n = len(values)
+        return np.sqrt((n - 1) / n) * np.std(values, ddof=1)
 
 
 class Bootstrap(Error):
 
-    def __init__(self, n_samples=100, random_state=RandomState(42), mode="random", **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, n_samples=100, mode="random", **kwargs) -> None:
+        super().__init__(n_samples=n_samples, **kwargs)
         self.n_samples = n_samples
         self.mode = mode
-        self.random_state = random_state
 
-    def se(self, estms):
-        n = len(estms)
-        return np.sqrt((n - 1) / n) * np.std(estms, ddof=1)
+    def se(self, values):
+        n = len(values)
+        return np.sqrt((n - 1) / n) * np.std(values, ddof=1)
 
-    def generate(self, pnl):
-        outcome, intervention = pnl.outcome, pnl.intervention
-        units = pnl.units()
-        N = len(units)
+    def generate(self, panel):
+        n = panel.n_units()
 
         for k in range(self.n_samples):
 
             if self.mode == "random":
-                u = self.random_state.choice(units, size=N, replace=True)
-            # see https://towardsdatascience.com/the-bayesian-bootstrap-6ca4a1d45148
-            elif self.mode == "bayes":
-                alpha = np.full(N, 4.0)
-                p = np.random.dirichlet(alpha)
-                u = self.random_state.choice(units, size=N, replace=True, p=p)
+                u = self.random_state.choice(np.arange(n), size=n, replace=True)
+                p = panel.iloc[:, u]
+
             # sample from control and treatment independently
             elif self.mode == "stratified":
-                u_treat = self.random_state.choice(intervention.columns[pnl.w], size=pnl.n_treat, replace=True)
-                u_contr = self.random_state.choice(intervention.columns[~pnl.w], size=pnl.n_contr, replace=True)
+                u_treat = self.random_state.choice(np.where(panel.w)[0], size=panel.n_treat, replace=True)
+                u_contr = self.random_state.choice(np.where(~panel.w)[0], size=panel.n_contr, replace=True)
                 u = np.concatenate([u_treat, u_contr])
+
+                p = panel.iloc[:, u]
+
+            # see https://towardsdatascience.com/the-bayesian-bootstrap-6ca4a1d45148
+            elif self.mode == "bayes":
+                assert len(panel.W(to_numpy=False).drop_duplicates()) == 2, "Bayes bootstrap does not work for staggered or mixed-interventions."
+
+                def sample(p, size, prefix="", alpha=4.0):
+
+                    s = p.n_units()
+                    Y = p.Y()
+                    W = p.W()
+
+                    P = self.random_state.dirichlet(np.full(len(Y), alpha), size=size)
+                    labels = [f"{prefix}{i + 1}" for i in range(s)]
+
+                    outcome = pd.DataFrame((P @ Y).T, columns=labels)
+                    intervention = pd.DataFrame((P @ W).T, columns=labels)
+                    intervention = (intervention > 0.0).astype(int)
+
+                    return outcome, intervention
+
+                treat = panel.iloc[:, panel.w]
+                treat_outcome, treat_intervention = sample(treat, size=treat.n_units(), prefix="synt_treat_")
+
+                contr = panel.iloc[:, ~panel.w]
+                contr_outcome, contr_intervention = sample(contr, size=contr.n_units(), prefix="synt_contr_")
+
+                outcome = pd.concat([treat_outcome, contr_outcome], axis=1)
+                intervention = pd.concat([treat_intervention, contr_intervention], axis=1)
+
+                p = Panel(outcome, intervention)
+
             else:
                 raise Exception(f"Unknown mode: {self.mode}. Available modes are `random`, `bayes`, and `stratified`.")
 
-            if intervention[u].values.sum() > 0:
-                yield Panel(outcome[u], intervention[u])
+            if p.n_units(treat=True) > 0:
+                yield p

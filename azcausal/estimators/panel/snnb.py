@@ -1,17 +1,35 @@
+try:
+    from sklearn.cluster import SpectralBiclustering
+    from sklearn.utils import check_array
+    from tensorly.decomposition import parafac
+    from cachetools import cached
+    from cachetools.keys import hashkey
+except:
+    raise ("SNNB requires additional libararies. Please run pip install azcausal[snnb]")
+
+import copy
 import warnings
 from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from cachetools import cached
-from cachetools.keys import hashkey
-from numpy import ndarray, float64
-from sklearn.cluster import SpectralBiclustering
-from sklearn.utils import check_array
 
+from numpy import ndarray, float64
+
+from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
 from azcausal.core.panel import Panel
+from azcausal.core.result import Result
+
+
+def nanmean(df, *args, **kwargs):
+    if len(df) == 0:
+        return np.nan
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        return np.nanmean(df, *args, **kwargs)
 
 
 class SNNB(Estimator):
@@ -104,13 +122,24 @@ class SNNB(Estimator):
         self.n_estimates: int = n_estimates
         self.clusters_hashes: set = None
 
-    def fit(self, pnl) -> dict:
+    def refit(self, result):
 
-        assert pnl.n_types_of_interventions() == 1, "Currently only a single type of intervention is supported. " \
-                                                    "Please make sure your panel contains only 0s and 1s. "
+        def f(panel):
+            return copy.deepcopy(result.estimator).fit(panel)
+
+        return f
+
+    def error(self, result, method, **kwargs):
+        f_estimate = self.refit(result)
+        return method.run(result, f_estimate=f_estimate, **kwargs)
+
+    def fit(self, panel) -> Result:
+
+        assert panel.n_treatments() == 1, "Currently only a single type of intervention is supported. " \
+                                          "Please make sure your panel contains only 0s and 1s. "
 
         # create a tensor from the panel data
-        tensor = self._get_tensor(pnl)
+        tensor = self._get_tensor(panel)
 
         filled, feas = self._fit(tensor)
         feas[~np.isnan(tensor)] = 1
@@ -122,29 +151,29 @@ class SNNB(Estimator):
         # calculate the treatment effect
         te = (iv - X_imputed)
 
-        att = np.nanmean(te[pnl.w])
-        ate = np.mean(pnl.Y() - X_imputed)
-        ite = pd.DataFrame(dict(att=np.nanmean(te[pnl.w], axis=1)), index=pnl.units(treat=True))
+        att = np.nanmean(te[panel.w])
+        ite = pd.DataFrame(dict(att=nanmean(te[panel.w], axis=1)), index=panel.units(treat=True))
 
-        df = pd.DataFrame(X_imputed.T, index=pnl.outcome.index, columns=pnl.outcome.columns)
-        imputed = Panel(df, pnl.intervention)
+        df = pd.DataFrame(X_imputed.T, index=panel.outcome.index, columns=panel.outcome.columns)
+        imputed = Panel(df, panel.intervention)
 
-        data = pd.DataFrame({
-            'time': pnl.time(),
-            'C': pnl.Y(contr=True).mean(axis=0),
-            'T': pnl.Y(treat=True).mean(axis=0),
-            "T'": imputed.Y(treat=True).mean(axis=0),
-            "att": [np.nanmean(e) if not np.isnan(e).all() else np.nan for e in te.T],
-            "W": pnl.W().any(axis=0)
+        by_time = pd.DataFrame({
+            "time": panel.time(),
+            "C": nanmean(panel.Y(contr=True), axis=0),
+            "T": nanmean(panel.Y(treat=True), axis=0),
+            "CF": nanmean(imputed.Y(treat=True), axis=0),
+            "att": nanmean(te[panel.w], axis=0),
+            "W": panel.wp.astype(int)
         }).set_index("time")
 
-        return dict(name="SNNB", estimator=self, panel=pnl, att=att, ate=ate, ite=ite, imputed=imputed, data=data)
+        T = panel.outcome.values[panel.intervention == 1].mean()
+        att = Effect(att, observed=T, multiplier=panel.n_interventions(), by_time=by_time, by_unit=ite,
+                     data=dict(imputed=imputed), name="ATT")
+        return Result(dict(att=att), data=panel, estimator=self)
 
-    def plot(self, estm, title=None, trend=True, C=True, show=True):
+    def plot(self, result, title=None, CF=True, C=True, show=True):
 
-        pnl = estm["panel"]
-        data = estm["data"]
-
+        data, panel = result.effect["by_time"], result.panel
         fig, ax = plt.subplots(1, 1, figsize=(12, 4))
 
         ax.plot(data.index, data["T"], label="T", color="blue")
@@ -152,13 +181,10 @@ class SNNB(Estimator):
         if C:
             ax.plot(data.index, data["C"], label="C", color="red")
 
-        if trend:
-            ax.plot(data.index, data["T'"], "--", color="blue", alpha=0.5)
-            for t, v in data.query("W == 1")["att"].items():
-                ax.arrow(t, data.loc[t, "T"] - data.loc[t, "att"], 0, v, color="black",
-                         length_includes_head=True, head_width=0.3, width=0.01, head_length=2)
+        if CF:
+            ax.plot(data.index, data["CF"], "--", color="blue", alpha=0.5)
 
-        ax.axvline(pnl.earliest_start, color="black", alpha=0.3)
+        ax.axvline(panel.earliest_start, color="black", alpha=0.3)
         ax.set_title(title)
 
         if show:
@@ -467,11 +493,6 @@ class SNNB(Estimator):
 
         rank = min(np.sum(s > self.min_singular_value), rank)
 
-        try:
-            from tensorly.decomposition import parafac
-        except:
-            raise Exception("Please install tensorly to use SNNB: pip install tensorly")
-
         weights, factors = parafac(
             X_copy,
             rank=rank,
@@ -555,7 +576,12 @@ class SNNB(Estimator):
         """
         y_pred = X @ beta
         delta = np.linalg.norm(y_pred - y)
-        ratio = delta / np.linalg.norm(y)
+
+        ratio = delta
+        # check if the denominator is zero
+        if np.linalg.norm(y) > 0:
+            ratio = delta / np.linalg.norm(y)
+
         return ratio ** 2
 
     def _subspace_inclusion(self, V1: ndarray, X2: ndarray) -> float64:
@@ -579,10 +605,10 @@ class SNNB(Estimator):
         s_feasible = True if subspace_inclusion_stat <= self.subspace_eps else False
         return ls_feasible and s_feasible
 
-    def _get_tensor(self, pnl: Panel) -> ndarray:
+    def _get_tensor(self, panel: Panel) -> ndarray:
 
         # populate actions dict
-        outcome, intervention = pnl.outcome.T, pnl.intervention.T
+        outcome, intervention = panel.outcome.T, panel.intervention.T
         I = len(np.unique(intervention))
         N, T = outcome.shape
         tensor = self._populate_tensor(

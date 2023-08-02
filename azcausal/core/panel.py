@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
+
+from azcausal.core.output import Output
 from azcausal.util import argmax
 
 
 class Panel:
 
-    def __init__(self, outcome, intervention) -> None:
+    def __init__(self, outcome, intervention, strict=True) -> None:
         """
         A collection of different panel observations.
 
@@ -15,10 +17,14 @@ class Panel:
             The observations
         intervention : pd.DataFrame
             The treatment values, where `true` indicates treatment and `false` does not.
+        strict : pd.DataFrame
+            Whether the initialization is strict, e.g. this will throw an exception if the panel is not balanced
+            (contains np.nan values).
         """
         super().__init__()
         self.outcome = outcome
         self.intervention = intervention
+        self.strict = strict
 
         self.check()
 
@@ -49,31 +55,21 @@ class Panel:
 
         # check if they have the same shape
         assert self.outcome.shape == self.intervention.shape, "The shape of outcome and intervention need to be identical."
-        assert np.all(
-            self.outcome.columns == self.intervention.columns), "The columns of `outcome` and `intervention` must be identical"
+        assert np.all(self.outcome.columns == self.intervention.columns), "The columns of `outcome` and `intervention` must be identical"
 
         # check for `nan` values
-        assert not np.any(np.isnan(self.Y())), "The outcome data set contains `nan` values."
-        assert not np.any(np.isnan(self.W())), "The intervention data set contains `nan` values."
+        if self.strict:
+            assert not np.any(np.isnan(self.Y())), "The outcome data set contains `nan` values."
+            assert not np.any(np.isnan(self.W())), "The intervention data set contains `nan` values."
 
-    def to_frame(self, index=True, treatment=False, rtime=True):
-        dy = self.outcome.unstack().to_frame("outcome")
-        dy = dy.join(self.intervention.unstack().to_frame("intervention"))
+    def to_frame(self, index=False):
+        outcome = self.outcome.unstack().to_frame("outcome")
+        intervention = self.intervention.unstack().to_frame("intervention")
+        dy = outcome.join(intervention)
         dy.index = dy.index.set_names(["unit", "time"])
-        dy = dy.reset_index()
 
-        if treatment:
-            label = treatment if isinstance(treatment, str) else "treatment"
-            dy[label] = dy["unit"].isin(set(self.units(treat=True))).astype(int)
-
-        if rtime:
-            time = self.time()
-            label = rtime if isinstance(rtime, str) else "rtime"
-            time_to_index = pd.DataFrame({label: np.arange(len(time))}, index=pd.Index(time, name="time"))
-            dy = dy.merge(time_to_index, on="time")
-
-        if index:
-            dy = dy.set_index(["unit", "time"])
+        if not index:
+            dy = dy.reset_index()
 
         return dy
 
@@ -289,12 +285,17 @@ class Panel:
         """
         return self.intervention.values.sum(axis=1) > 0
 
-    # ----------------------------------------------- INTERVENTIONS ---------------------------------------------------
+    # ----------------------------------------------- CONVENIENCE -----------------------------------------------------
 
-    def n_types_of_interventions(self):
+    def n_treatments(self):
         return len(np.unique(self.intervention.values)) - 1
 
-    # ----------------------------------------------- CONVENIENCE -----------------------------------------------------
+    def n_interventions(self, treatment=None):
+        if treatment is None:
+            mask = self.intervention.values != 0
+        else:
+            mask = self.intervention.values == treatment
+        return mask.sum()
 
     def copy(self):
         return Panel(self.outcome.copy(), self.intervention.copy())
@@ -317,3 +318,12 @@ class Panel:
 
     def counts(self):
         return (self.n_pre, self.n_post), (self.n_contr, self.n_treat)
+
+    # ----------------------------------------------- OUTPUT -----------------------------------------------------
+
+    def summary(self, **kwargs):
+        return (Output()
+                .text("Panel", align="center")
+                .texts([f"Time Periods: {self.n_time()} ({self.n_pre}/{self.n_post})", "total (pre/post)"])
+                .texts([f"Units: {self.n_units()} ({self.n_contr}/{self.n_treat})", "total (contr/treat)"])
+                )

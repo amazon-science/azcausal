@@ -10,21 +10,25 @@ from azcausal.util import to_matrices
 
 class DataSet:
 
-    def __init__(self) -> None:
+    def __init__(self, folder=None, cache=True) -> None:
         super().__init__()
-        self.download_if_not_exists()
 
-    def local(self):
-        dir = dirname(realpath(__file__))
-        return join(dir, self.file())
+        if folder is None:
+            folder = join(dirname(realpath(__file__)), self.file())
+
+        if cache:
+            self.path = folder
+            self.download_if_not_exists()
+        else:
+            self.path = self.remote()
 
     def download_if_not_exists(self, force=False):
-        path = self.local()
+        path = self.path
         if force or not exists(path):
             request.urlretrieve(self.remote(), path)
 
     def load(self):
-        return pd.read_csv(self.local())
+        return pd.read_csv(self.path)
 
     @abstractmethod
     def remote(self):
@@ -32,13 +36,13 @@ class DataSet:
 
     @abstractmethod
     def file(self):
-        pass
+        raise Exception("Each Dataset must ")
 
 
 class CaliforniaProp99(DataSet):
 
     def load(self):
-        return pd.read_csv(self.local(), delimiter=';')
+        return pd.read_csv(self.path, delimiter=';')
 
     def panel(self):
         data = self.load()
@@ -56,6 +60,7 @@ class Abortion(DataSet):
 
     def load(self):
         return pd.read_stata(self.local())
+
     def panel(self):
         data = self.load()
         outcome, intervention = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")

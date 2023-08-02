@@ -1,3 +1,6 @@
 nbsphinx
 sphinx_rtd_theme
+pandoc
 markupsafe==2.0.1
+papermill
+ipykernel

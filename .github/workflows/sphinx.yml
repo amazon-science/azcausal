@@ -1,0 +1,30 @@
+
+name: Documentation
+
+on:
+
+  push:
+    branches: ["testing"]
+
+
+jobs:
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install azcausal
+        run: pip install '.[core,snnb]'
+      - name: Install Documentation Dependencies
+        run: pip install -r docs/requirements.txt
+      - name: Run Jupyter Notebooks
+        run: python docs/run_ipynb.py
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "docs/"
+          pre-build-command: "apt-get install -y pandoc && pip install pandoc"
+      - uses: actions/upload-artifact@v1
+        with:
+          name: azcausal
+          path: docs/build/html/
