@@ -1,3 +1,12 @@
+try:
+    from sklearn.cluster import SpectralBiclustering
+    from sklearn.utils import check_array
+    from tensorly.decomposition import parafac
+    from cachetools import cached
+    from cachetools.keys import hashkey
+except:
+    raise ("SNNB requires additional libararies. Please run pip install azcausal[snnb]")
+
 import copy
 import warnings
 from typing import Optional, Tuple
@@ -5,12 +14,8 @@ from typing import Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from cachetools import cached
-from cachetools.keys import hashkey
+
 from numpy import ndarray, float64
-from sklearn.cluster import SpectralBiclustering
-from sklearn.utils import check_array
-from tensorly.decomposition import parafac
 
 from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator

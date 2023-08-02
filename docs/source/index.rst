@@ -8,33 +8,12 @@ Home
    :hidden:
 
    self
-
-.. toctree::
-   :name: Introduction
-   :caption: Introduction
-   :maxdepth: 1
-   :hidden:
-
-   introduction/index
+   introduction/introduction
+   estimators/estimators
+   tutorials/tutorials
 
 
 
-.. toctree::
-   :name: Estimators
-   :caption: Estimators
-   :maxdepth: 1
-   :hidden:
-
-   estimators/index
-
-
-.. toctree::
-   :name: Tutorials
-   :caption: Tutorials
-   :maxdepth: 1
-   :hidden:
-
-   tutorials/index
 
 
 
@@ -44,64 +23,7 @@ book: `Causal Inference for The Brave and True <https://matheusfacure.github.io/
 
 Currently, azcausal provides two well-known and widely used causal inference methods: Difference-in-Difference (DID) and
 Synthetic Difference-in-Difference (SDID). Moreover, error estimates via Placebo, Boostrap, or JackKnife are available.
-
-
-
-Installation
-********************************************************************************
-
-
-To install the current release, please execute:
-
-.. code:: bash
-
-    pip install git+https://github.com/amazon-science/azcausal.git
-
-
-.. _Usage:
-
-Usage
-********************************************************************************
-
-
-.. code:: python
-
-    import numpy as np
-
-    from azcausal.core.error import Placebo
-    from azcausal.core.panel import Panel
-    from azcausal.core.parallelize import Pool
-    from azcausal.data import CaliforniaProp99
-    from azcausal.estimators.panel.sdid import SDID
-    from azcausal.util import to_matrices
-
-    # load an example data set with the columns Year, State, PacksPerCapita, treated.
-    df = CaliforniaProp99().load()
-
-    # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    outcome, intervention = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
-
-    # if there are nan values it was not balanced in the first place.
-    assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
-
-    # create a panel object to access observations conveniently
-    panel = Panel(outcome, intervention)
-
-    # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = SDID()
-
-    # run the estimator
-    result = estimator.fit(panel)
-
-    # create a process pool for parallelization
-    pool = Pool(mode="thread", progress=True)
-
-    # run the error validation method
-    method = Placebo(n_samples=11)
-    estimator.error(result, method, parallelize=pool)
-
-    # print out information about the estimate
-    print(result.summary(title="CaliforniaProp99"))
+Given the result of an estimator printing the summary looks as follows:
 
 
 .. code:: bash
@@ -132,7 +54,11 @@ Usage
     |  Counter Factual: 911.45                                                     |
     ╰──────────────────────────────────────────────────────────────────────────────╯
 
+
+Moreover azcausal supports plotting the impact as well:
+
 .. image:: https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true
+
 
 
 Estimators

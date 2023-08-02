@@ -10,9 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+from os.path import dirname
+ROOT = dirname(dirname(dirname(__file__)))
+sys.path.insert(0, ROOT)
 
 
 # -- Project information -----------------------------------------------------
@@ -41,6 +42,9 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['**.ipynb_checkpoints']
+
+nbsphinx_execute = 'never'
+
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -73,5 +77,5 @@ html_theme_options = {
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
-    'titles_only': False
+    'titles_only': True
 }
