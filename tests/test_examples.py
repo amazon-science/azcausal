@@ -10,7 +10,7 @@ def filter_by_exclude(files, exclude=[]):
 
 
 def files_from_folder(folder, regex='**/*.py', skip=[]):
-    files = [join(folder, fname) for fname in Path(folder).glob(regex) if not os.path.basename(fname).startswith('cloud')]
+    files = [join(folder, fname) for fname in Path(folder).glob(regex) if not os.path.basename(fname).startswith('aws_')]
     # files = [join(folder, fname) for fname in Path(folder).glob(regex)]
 
     return filter_by_exclude(files, exclude=skip)

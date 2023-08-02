@@ -79,7 +79,7 @@ class SDID(Estimator):
 
         data = dict(lambd=lambd, omega=omega, noise=noise, solvers=solvers, **did)
 
-        att = Effect(did["att"], T=did["post_treat"], n=panel.n_interventions(), by_time=by_time, data=data, name="ATT")
+        att = Effect(did["att"], observed=did["post_treat"], multiplier=panel.n_interventions(), by_time=by_time, data=data, name="ATT")
         return Result(dict(att=att), data=panel, estimator=self)
 
     def refit(self, result, optimize=True, low_memory=False):

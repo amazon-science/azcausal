@@ -1,7 +1,8 @@
 import numpy as np
 
 from azcausal.core.error import JackKnife
-from azcausal.core.power import Power
+from azcausal.core.parallelize import Joblib
+from azcausal.core.scenario import Scenario, Evaluator, power
 from azcausal.core.synth import SyntheticEffect
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.sdid import SDID
@@ -16,9 +17,10 @@ def f_estimate(panel):
 
 
 if __name__ == "__main__":
-
     # get a panel where no units are treated
     panel = CaliforniaProp99().panel()
+
+    # let us only consider non-treated units here
     outcome = panel.outcome.loc[:, ~panel.w]
 
     # the type of synthetic treatment tested for power
@@ -37,15 +39,17 @@ if __name__ == "__main__":
     treatment[-n_treat_times:, :n_treat_units] = att
 
     # create synthetic panels where the last 8 time s
-    synth_effect = SyntheticEffect(outcome, treatment, mode=mode)
+    synth_effect = SyntheticEffect(outcome, treatment, mode=mode, tags=dict(att=-0.1))
 
     # the number of runs we run to test the power
-    n_samples = 31
+    n_samples = 11
 
     # run the power analysis
-    power = Power(f_estimate, synth_effect, n_samples, conf=90).run()
+    results = Scenario(f_estimate, synth_effect, f_eval=Evaluator(conf=90)).run(n_samples, parallelize=Joblib())
 
-    print("(-):", power['power']['-'])
-    print("(+/-):", power['power']['+/-'])
-    print("(+):", power['power']['+'])
+    # get the power from the results
+    pw = power(results)
 
+    print(f"(-) {pw['-']:.2%}")
+    print(f"(+/-) {pw['+/-']:.2%}")
+    print(f"(+) {pw['+']:.2%}")

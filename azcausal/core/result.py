@@ -27,7 +27,7 @@ class Result:
 
     def summary(self, title=None, cumulative=True, percentage=True, **kwargs):
         sections = []
-        if self.data is not None:
+        if hasattr(self.data, 'summary'):
             sections.append(self.data.summary(**kwargs))
 
         for effect in self.effects.values():
@@ -38,9 +38,8 @@ class Result:
                 perc = effect.percentage()
                 sections.append(perc.summary(**kwargs))
 
-            if cumulative and self.panel is not None:
-                n_interventions = self.panel.n_interventions()
-                cum = effect.cumulative(n_interventions)
+            if cumulative and effect.multiplier is not None:
+                cum = effect.cumulative(effect.multiplier)
                 sections.append(cum.summary(**kwargs))
 
         return Summary(sections, title=title)

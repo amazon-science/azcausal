@@ -1,3 +1,6 @@
 fsspec
 s3fs
 flask
+aioboto3
+aiobotocore
+dill

@@ -30,28 +30,23 @@ Usage
 
 .. code:: python
 
-    from azcausal.core.error import JackKnife
+    import numpy as np
+
+    from azcausal.core.error import Placebo
     from azcausal.core.panel import Panel
-    from azcausal.util import zeros_like, to_matrix
+    from azcausal.core.parallelize import Pool
     from azcausal.data import CaliforniaProp99
     from azcausal.estimators.panel.sdid import SDID
-
+    from azcausal.util import to_matrices
 
     # load an example data set with the columns Year, State, PacksPerCapita, treated.
     df = CaliforniaProp99().load()
 
     # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    outcome = to_matrix(df, "Year", "State", "PacksPerCapita", fillna=0.0)
+    outcome, intervention = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
 
-    # the time when the intervention started
-    start_time = df.query("treated == 1")["Year"].min()
-
-    # the units that have been treated
-    treat_units = list(df.query("treated == 1")["State"].unique())
-
-    # create the treatment matrix based on the information above
-    intervention = zeros_like(outcome)
-    intervention.loc[start_time:, intervention.columns.isin(treat_units)] = 1
+    # if there are nan values it was not balanced in the first place.
+    assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
 
     # create a panel object to access observations conveniently
     panel = Panel(outcome, intervention)
@@ -60,18 +55,17 @@ Usage
     estimator = SDID()
 
     # run the estimator
-    estm = estimator.fit(panel)
-    print("Average Treatment Effect on the Treated (ATT):", estm["att"])
+    result = estimator.fit(panel)
 
-    # show the results in a plot
-    estimator.plot(estm, trend=True, sc=True)
+    # create a process pool for parallelization
+    pool = Pool(mode="thread", progress=True)
 
-    # run an error validation method
-    method = JackKnife()
-    err = estimator.error(estm, method)
+    # run the error validation method
+    method = Placebo(n_samples=11)
+    estimator.error(result, method, parallelize=pool)
 
-    print("Standard Error (se):", err["se"])
-    print("Error Confidence Interval (90%):", err["CI"]["90%"])
+    # print out information about the estimate
+    print(result.summary(title="CaliforniaProp99"))
 
 
 

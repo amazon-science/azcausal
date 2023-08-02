@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 class Parallelize(object):
 
-    def __call__(self, func, args):
+    def __call__(self, func, args, total=None):
         return self.run(func, args)
 
     @abstractmethod
-    def run(self, func, args):
+    def run(self, func, args, total=None):
         pass
 
 

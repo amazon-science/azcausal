@@ -87,7 +87,7 @@ class DID(Estimator):
         by_time["CF"] = by_time["T"] - by_time["att"].fillna(0.0)
         by_time = by_time.set_index("time")
 
-        att = Effect(did["att"], T=did["post_treat"], by_time=by_time, data=did, name="ATT")
+        att = Effect(did["att"], observed=did["post_treat"], by_time=by_time, data=did, name="ATT")
         return Result(dict(att=att), data=panel, estimator=self)
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
@@ -147,6 +147,7 @@ def did_regr(dy):
 
     return att, se
 
+
 class DIDRegressor(Estimator):
     def fit(self, panel):
         # for the regression we need directly the data frame
@@ -154,9 +155,10 @@ class DIDRegressor(Estimator):
 
         # do the regression and get the treatment effect with se
         att, se = did_regr(dy)
-        T = dy.query("intervention == 1")["outcome"].mean()
+        treated = dy.query("intervention == 1")
+        observed = treated["outcome"].mean()
 
-        att = Effect(att, se=se, T=T, name="ATT")
+        att = Effect(att, se=se, observed=observed, multiplier=len(treated), name="ATT")
         return Result(dict(att=att), data=panel, estimator=self)
 
 
@@ -246,10 +248,8 @@ class EventStudy(Estimator):
         att, se, by_time, regr = did_event_study(dz, n_pre=self.n_pre, exclude=self.exclude)
 
         dx = dz.query("intervention == 1")
-        T = dx["outcome"].mean()
-        n = len(dx)
-
-        att = Effect(att, se=se, T=T, n=n, by_time=by_time, data=dict(regr=regr), name="ATT")
+        att = Effect(att, se=se, observed=dx["outcome"].mean(), multiplier=len(dx), by_time=by_time,
+                     data=dict(regr=regr), name="ATT")
         return Result(dict(att=att), data=panel, estimator=self)
 
     def plot(self, result, show=True, ax=None):

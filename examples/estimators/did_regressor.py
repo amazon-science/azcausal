@@ -31,4 +31,21 @@ if __name__ == '__main__':
     # print out information about the estimate
     print(result.summary(title="CaliforniaProp99"))
 
+    from azcausal.core.panel import Panel
+    from azcausal.data import CaliforniaProp99
+    from azcausal.estimators.panel.did import DIDRegressor
+    from azcausal.util import to_matrix, intervention_from_outcome
+
+    dy = df.rename(columns=dict(State='unit', Year='time', PacksPerCapita='outcome', treated='intervention'))
+
+    # initialize an estimator object, here difference in difference (did)
+    estimator = DIDRegressor()
+
+    # fit the estimator
+    result = estimator.fit(dy)
+
+    # print out information about the estimate
+    print(result.summary(title="CaliforniaProp99"))
+
+
 

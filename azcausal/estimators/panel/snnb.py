@@ -162,7 +162,7 @@ class SNNB(Estimator):
         }).set_index("time")
 
         T = panel.outcome.values[panel.intervention == 1].mean()
-        att = Effect(att, T=T, n=panel.n_interventions(), by_time=by_time, by_unit=ite,
+        att = Effect(att, observed=T, multiplier=panel.n_interventions(), by_time=by_time, by_unit=ite,
                      data=dict(imputed=imputed), name="ATT")
         return Result(dict(att=att), data=panel, estimator=self)
 

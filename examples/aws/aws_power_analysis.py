@@ -8,14 +8,12 @@ from botocore.config import Config
 from azcausal.cloud.client import AWSLambda, Client
 from azcausal.cloud.job import Job
 from azcausal.core.parallelize import Joblib
-from azcausal.core.power import Power
+from azcausal.core.scenario import Scenario, Evaluator, power
 from azcausal.core.synth import SyntheticEffect
 from azcausal.data import CaliforniaProp99
 
 __ARN__ = "arn:aws:lambda:us-east-1:112353327285:function:azcausal-lambda-run:$LATEST"
 __S3__ = "s3://azcausal-aws-lambda"
-
-from azcausal.estimators.panel.sdid import SDID
 
 config = Config(connect_timeout=300, read_timeout=300)
 lambda_client = boto3.client('lambda', region_name=arnparse(__ARN__).region, config=config)
@@ -51,30 +49,37 @@ if __name__ == "__main__":
     f_estimate = f_estimate_aws
 
     # the number of samples for the power (please increase for higher accuracy)
-    n_samples = 11
+    n_samples = 31
 
-    parallelize = Joblib(n_samples)
+    parallelize = Joblib(n_samples, progress=True)
 
     panel = CaliforniaProp99().panel()
     outcome = panel.outcome.loc[:, ~panel.w]
 
-    results = []
+    intervention = np.zeros_like(outcome.values).astype(int)
+    intervention[-10:, :2] = 1
+
+    df = []
 
     for att in np.linspace(0.0, 0.30, 7):
-        treatment = np.zeros_like(outcome.values)
-        treatment[-10:, :2] = -att if att != 0.0 else np.nan
+
+        # create the treatment matrix for the effect
+        treatment = intervention * att * -1
 
         # create synthetic panels where the last 8 time s
-        synth_effect = SyntheticEffect(outcome, treatment, mode='perc')
+        synth_effect = SyntheticEffect(outcome, treatment, intervention=intervention, mode='perc')
 
         # run the power analysis
-        pw = Power(f_estimate, synth_effect, n_samples, conf=90).run()
+        results = Scenario(f_estimate, synth_effect, f_eval=Evaluator(conf=90)).run(n_samples, parallelize=parallelize)
 
-        print(f"Percentage Treatment Effect {att:.3f} | (-): {pw['power']['-']:.3%}")
+        # calculate the power from the results
+        pw = power(results)
 
-        results.append(dict(att=att, **pw["power"]))
+        print(f"Percentage Treatment Effect {att:.3f} | (-): {pw['-']:.3%}")
 
-    df = pd.DataFrame(results)
+        df.append(dict(att=att, **pw))
+
+    df = pd.DataFrame(df)
 
     print("")
     print(df)
