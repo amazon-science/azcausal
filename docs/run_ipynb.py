@@ -1,5 +1,5 @@
 import glob
-from os.path import realpath, dirname
+from os.path import dirname
 
 import papermill as pm
 

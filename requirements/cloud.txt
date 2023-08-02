@@ -1,0 +1,6 @@
+aioboto3
+aiobotocore
+aws_requests_auth
+arnparse
+s3fs
+dill

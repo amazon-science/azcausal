@@ -10,6 +10,7 @@ from cachetools.keys import hashkey
 from numpy import ndarray, float64
 from sklearn.cluster import SpectralBiclustering
 from sklearn.utils import check_array
+from tensorly.decomposition import parafac
 
 from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
@@ -486,11 +487,6 @@ class SNNB(Estimator):
             rank = self._universal_rank(s, ratio=m / n)
 
         rank = min(np.sum(s > self.min_singular_value), rank)
-
-        try:
-            from tensorly.decomposition import parafac
-        except:
-            raise Exception("Please install tensorly to use SNNB: pip install tensorly")
 
         weights, factors = parafac(
             X_copy,

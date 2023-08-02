@@ -1,12 +1,29 @@
+import glob
+import itertools
+from os.path import dirname, join
+from pathlib import Path
+
 import setuptools
 from setuptools import find_packages
 
 from azcausal.version import __version__
 
+
 # ---------------------------------------------------------------------------------------------------------
 # GENERAL
 # ---------------------------------------------------------------------------------------------------------
 
+def load_requirements():
+    res = {}
+    for path in glob.glob(join(dirname(__file__), 'requirements', '*.txt')):
+        with open(path) as f:
+            res[Path(path).stem] = f.read().splitlines()
+
+    res['full'] = list(itertools.chain(*res.values()))
+    return res
+
+
+extras_require = load_requirements()
 
 __name__ = "azcausal"
 __author__ = "Julian Blank"
@@ -22,8 +39,8 @@ data = dict(
     license='Apache License 2.0',
     keywords="causality, inference",
     packages=find_packages(include=['azcausal', 'azcausal.*']),
-    install_requires=['pandas', 'scipy', 'tqdm', 'matplotlib', 'statsmodels', 'linearmodels', 'cachetools',
-                      'scikit-learn', 'dill', 'joblib >= 1.3'],
+    install_requires=extras_require['core'],
+    extras_require=extras_require,
     platforms='any',
     classifiers=[
         'Intended Audience :: Developers',
@@ -57,6 +74,5 @@ def readme():
 
 data['long_description'] = readme()
 data['long_description_content_type'] = 'text/x-rst'
-
 
 setuptools.setup(**data)
