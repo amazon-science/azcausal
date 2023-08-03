@@ -34,7 +34,7 @@ class Job:
         with self.s3().open(path, 'rb') as f:
             return dill.loads(f.read())
 
-    def free(self, path=None):
+    def delete(self, path=None):
         if path is None:
             path = self.path
 

@@ -2,11 +2,11 @@ import uuid
 from os.path import join
 
 import boto3
-from arnparse import arnparse
 from botocore.config import Config
 
 from azcausal.cloud.client import AWSLambda, Client
 from azcausal.data import CaliforniaProp99
+from azcausal.util import parse_arn
 
 
 class Function:
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     arn = "arn:aws:lambda:us-east-1:112353327285:function:azcausal-lambda-run:$LATEST"
 
     config = Config(connect_timeout=300, read_timeout=300)
-    lambda_client = boto3.client('lambda', region_name=arnparse(arn).region, config=config)
+    lambda_client = boto3.client('lambda', region_name=parse_arn(arn)['region'], config=config)
 
     endpoint = AWSLambda(lambda_client, arn)
     client = Client(endpoint)

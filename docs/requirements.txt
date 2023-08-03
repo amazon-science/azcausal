@@ -4,3 +4,5 @@ pandoc
 markupsafe==2.0.1
 papermill
 ipykernel
+sphinx_copybutton
+sphinxcontrib-bibtex

@@ -12,9 +12,9 @@
 #
 import sys
 from os.path import dirname
+
 ROOT = dirname(dirname(dirname(__file__)))
 sys.path.insert(0, ROOT)
-
 
 # -- Project information -----------------------------------------------------
 
@@ -32,7 +32,9 @@ release = '0.1.1'
 # ones.
 extensions = [
     'nbsphinx',
-    "sphinx_rtd_theme"
+    'sphinx_copybutton',
+    'sphinxcontrib.bibtex',
+    'sphinx_rtd_theme'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -45,6 +47,7 @@ exclude_patterns = ['**.ipynb_checkpoints']
 
 nbsphinx_execute = 'never'
 
+bibtex_bibfiles = ['references.bib']
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -73,7 +76,7 @@ html_theme_options = {
     'style_external_links': False,
     'vcs_pageview_mode': '',
     # Toc options
-    'collapse_navigation': True,
+    'collapse_navigation': False,
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,

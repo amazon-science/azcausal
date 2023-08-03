@@ -1,7 +1,5 @@
-from urllib.parse import urlparse
-
 import boto3
-from aws_requests_auth.aws_auth import AWSRequestsAuth
+from requests_auth_aws_sigv4 import AWSSigV4
 
 from azcausal.cloud.client import REST, Client
 
@@ -24,14 +22,7 @@ if __name__ == "__main__":
     session = boto3.Session()
     credentials = session.get_credentials()
 
-    auth = AWSRequestsAuth(aws_access_key=credentials.access_key,
-                           aws_secret_access_key=credentials.secret_key,
-                           aws_token=credentials.token,
-                           aws_host=urlparse(url).hostname,
-                           aws_region='us-east-1',
-                           aws_service='lambda')
-
-    endpoint = REST(url, auth=auth)
+    endpoint = REST(url, auth=AWSSigV4('lambda', region='us-east-1'))
     client = Client(endpoint)
 
     function = Function()
