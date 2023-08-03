@@ -8,9 +8,11 @@ Home
    :hidden:
 
    self
-   introduction/introduction
+   installation
+   getting_started
    estimators/estimators
    tutorials/tutorials
+   license
 
 
 
