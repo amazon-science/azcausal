@@ -50,8 +50,8 @@ azcausal is a toolkit for causal inference in general and provides implementatio
       - 
     * - :ref:`Synthetic Difference in Difference (SDID)<sdid>` 
       - :cite:p:`sdid`
-    * - :ref:`Synthetic Nearest Neighbor Biclustering (SNNB)<snnb>` 
-      - 
+    * - :ref:`Synthetic Nearest Neighbor (SNN)<snn>`
+      - :cite:p:`snn`
 
 
 
