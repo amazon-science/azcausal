@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from azcausal.core.parallelize import Joblib
-from azcausal.core.scenario import Scenario, Evaluator, power
+from azcausal.core.performance import power
 from azcausal.core.synth import SyntheticEffect
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.did import DIDRegressor
@@ -18,17 +17,21 @@ if __name__ == "__main__":
 
     f_estimate = f_estimate_did_regr
 
-    parallelize = Joblib()
-
     panel = CaliforniaProp99().panel()
     outcome = panel.outcome.loc[:, ~panel.w]
 
-    # the number of samples for the power (please increase for higher accuracy)
+    # the number of samples for each power step
     n_samples = 11
+
+    # length of the intervention
+    n_post = 10
+
+    # number of treated units
+    n_treat = 2
 
     # create the intervention matrix
     intervention = np.zeros_like(outcome.values).astype(int)
-    intervention[-10:, :2] = 1
+    intervention[-n_post:, :n_treat] = 1
 
     df = []
 
@@ -40,11 +43,11 @@ if __name__ == "__main__":
         # create synthetic panels where the last 8 time s
         synth_effect = SyntheticEffect(outcome, treatment, intervention=intervention, mode='perc')
 
-        # run the power analysis
-        results = Scenario(f_estimate, synth_effect, f_eval=Evaluator(conf=90)).run(n_samples, parallelize=parallelize)
+        # estimate the treatment effect for different scenarios
+        results = [f_estimate(synth_effect.create(seed=seed).panel()) for seed in range(n_samples)]
 
-        # calculate the power from the results
-        pw = power(results)
+        # get the power from the results
+        pw = power(results, conf=90)
 
         print(f"Percentage Treatment Effect {att:.3f} | (-): {pw['-']:.3%}")
 

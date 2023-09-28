@@ -3,7 +3,14 @@ import numpy as np
 
 class Format:
 
-    def __call__(self, x):
+    def __init__(self) -> None:
+        """
+        The format how numbers should be represented.
+        """
+        super().__init__()
+
+    def __call__(self,
+                 x: float):
         return str(x)
 
 

@@ -1,4 +1,4 @@
-from azcausal.cloud.serialization import Serialization
+from azcausal.remote.serialization import Serialization
 
 
 class Server:

@@ -1,8 +1,8 @@
 import threading
 from time import sleep
 
-from azcausal.cloud.client import REST, Client
-from azcausal.cloud.server import flask_server
+from azcausal.remote.client import REST, Client
+from azcausal.remote.server import flask_server
 
 
 class Function:

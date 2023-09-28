@@ -7,60 +7,130 @@ from azcausal.util import argmax
 
 class Panel:
 
-    def __init__(self, outcome, intervention, strict=True) -> None:
+    def __init__(self,
+                 outcome='outcome',
+                 intervention='intervention',
+                 confounders=None,
+                 data=None,
+                 mapping=None,
+                 balanced=True) -> None:
         """
-        A collection of different panel observations.
+        The `Panel` object is a collection of data frames where the index is time and the columns are the units.
 
         Parameters
         ----------
-        outcome : pd.DataFrame
-            The observations
-        intervention : pd.DataFrame
-            The treatment values, where `true` indicates treatment and `false` does not.
-        strict : pd.DataFrame
-            Whether the initialization is strict, e.g. this will throw an exception if the panel is not balanced
-            (contains np.nan values).
+        outcome : pd.DataFrame or str
+            The outcome as `pd.DataFrame` or as string mapping to the data provided.
+
+        intervention : pd.DataFrame or str
+            The intervention as `pd.DataFrame` or as string mapping to the data provided.
+
+        confounders : list
+            A list of strings mapping to entries in the data.
+
+        data : dict
+            A dictionary where each key maps to a data frame.
+
+        mapping : dict
+            A mapping can be provided directly and overwrites the strings provided by outcome and intervention.
+
+        balanced
+            Strictly check the input data are balanced (do not contain any NaNs).
+
         """
         super().__init__()
-        self.outcome = outcome
-        self.intervention = intervention
-        self.strict = strict
+
+        if data is None:
+            data = dict()
+
+        # a list of values to be considered as confounders.
+        if confounders is None:
+            confounders = list()
+
+        # set the data directly if provided not via string
+        if not isinstance(intervention, str):
+            data['intervention'] = intervention
+            intervention = 'intervention'
+        if not isinstance(outcome, str):
+            data['outcome'] = outcome
+            outcome = 'outcome'
+
+        # use the default mapping if not explicitly provided
+        if mapping is None:
+            mapping = dict(outcome=outcome, intervention=intervention, confounders=confounders)
+
+        self.data = data
+        self.mapping = mapping
+        self.balanced = balanced
 
         self.check()
 
+    def check(self):
+
+        assert self.intervention is not None, "intervention needs to be provided"
+
+        units = list(self.intervention.columns)
+        time = list(self.intervention.index)
+
+        for name, df in self.data.items():
+
+            assert list(df.columns) == units, f"{name} need to have the same column names as the intervention data."
+            assert list(df.index) == time, f"{name} need to have the same index as the intervention data."
+
+            # check if the input is balanced
+            if self.balanced:
+                assert np.all(~np.isnan(df.values)), f"{name} contains `nan` values and thus is not balanced."
+
+    def get_value(self, name):
+        if name in self.mapping:
+            name = self.mapping[name]
+        return self.data.get(name)
+
+    def set_value(self, name, df):
+        if name in self.mapping:
+            name = self.mapping[name]
+        self.data[name] = df
+
+    # select a specific value as outcome
+    def select(self, value: str):
+
+        # create a new mapping where value is outcome
+        mapping = dict(self.mapping)
+        mapping['outcome'] = value
+
+        return Panel(data=self.data, mapping=mapping)
+
+    # all values available
+    def values(self):
+        return list(self.data.keys())
+
+    def apply(self, f):
+        data = {k: f(v) for k, v in self.data.items()}
+        return Panel(data=data, mapping=self.mapping)
+
+    # map the indicator function for the panel
     def __getitem__(self, key):
-        return Panel(self.outcome[key], self.intervention[key])
+        return self.apply(lambda df: df[key])
 
     @property
     def loc(self):
-        outcome, intervention = self.outcome, self.intervention
+        panel = self
 
         class Index:
             def __getitem__(self, key):
-                return Panel(outcome.loc[key], intervention.loc[key])
+                return panel.apply(lambda df: df.loc[key])
 
         return Index()
 
     @property
     def iloc(self):
-        outcome, intervention = self.outcome, self.intervention
+        panel = self
 
         class Index:
             def __getitem__(self, key):
-                return Panel(outcome.iloc[key], intervention.iloc[key])
+                return panel.apply(lambda df: df.iloc[key])
 
         return Index()
-
-    def check(self):
-
-        # check if they have the same shape
-        assert self.outcome.shape == self.intervention.shape, "The shape of outcome and intervention need to be identical."
-        assert np.all(self.outcome.columns == self.intervention.columns), "The columns of `outcome` and `intervention` must be identical"
-
-        # check for `nan` values
-        if self.strict:
-            assert not np.any(np.isnan(self.Y())), "The outcome data set contains `nan` values."
-            assert not np.any(np.isnan(self.W())), "The intervention data set contains `nan` values."
 
     def to_frame(self, index=False):
         outcome = self.outcome.unstack().to_frame("outcome")
@@ -120,7 +190,7 @@ class Panel:
             units = ~self.w
 
         # query the data frame given the input
-        dy = self.__dict__[value].loc[time, units]
+        dy = self.get_value(value).loc[time, units]
 
         # convert to numpy if desired
         if to_numpy:
@@ -149,7 +219,7 @@ class Panel:
             The units of the panel (filters applied if desired)
 
         """
-        units = np.array(self.outcome.columns)
+        units = np.array(self.intervention.columns)
 
         if (treat is True) or (contr is False):
             units = units[self.w]
@@ -185,7 +255,7 @@ class Panel:
             The time periods where the restrictions
 
         """
-        time = np.array(self.outcome.index)
+        time = np.array(self.intervention.index)
 
         if trim:
             t = np.array(self.wp)
@@ -286,6 +356,22 @@ class Panel:
         return self.intervention.values.sum(axis=1) > 0
 
     # ----------------------------------------------- CONVENIENCE -----------------------------------------------------
+
+    @property
+    def outcome(self):
+        return self.get_value('outcome')
+
+    @outcome.setter
+    def outcome(self, df):
+        self.set_value('outcome', df)
+
+    @property
+    def intervention(self):
+        return self.get_value('intervention')
+
+    @intervention.setter
+    def intervention(self, df):
+        self.set_value('intervention', df)
 
     def n_treatments(self):
         return len(np.unique(self.intervention.values)) - 1

@@ -6,8 +6,8 @@ import s3fs
 from arnparse import arnparse
 from botocore.config import Config
 
-from azcausal.cloud.client import AWSLambda, Client
-from azcausal.cloud.serialization import Serialization
+from azcausal.remote.client import AWSLambda, Client
+from azcausal.remote.serialization import Serialization
 from azcausal.data import CaliforniaProp99
 
 
@@ -25,7 +25,7 @@ class Function:
 
     def __call__(self):
         import s3fs
-        from azcausal.cloud.serialization import Serialization
+        from azcausal.remote.serialization import Serialization
         from azcausal.estimators.panel.sdid import SDID
 
         fs = s3fs.S3FileSystem(anon=False)

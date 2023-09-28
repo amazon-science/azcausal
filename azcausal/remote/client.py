@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from azcausal.cloud.serialization import Serialization
+from azcausal.remote.serialization import Serialization
 
 
 class Endpoint:

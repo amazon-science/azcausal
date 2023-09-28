@@ -1,7 +1,7 @@
 import boto3
 from requests_auth_aws_sigv4 import AWSSigV4
 
-from azcausal.cloud.client import REST, Client
+from azcausal.remote.client import REST, Client
 
 
 class Function:

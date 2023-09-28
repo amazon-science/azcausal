@@ -37,7 +37,7 @@ def test_california_correct(sdid, data):
                         effect["solvers"]["omega"]["x"][-3:])
     assert effect["solvers"]["omega"]["iter"] == 10000
 
-    assert_almost_equal(-15.6038278727338469, effect["att"])
+    assert_almost_equal(-15.6038278727338469, effect.value)
 
 
 def test_jackknife_correct(sdid, data):
@@ -46,10 +46,10 @@ def test_jackknife_correct(sdid, data):
     panel.intervention["Wyoming"].loc[1989:] = 1
 
     result = sdid.fit(panel)
-    assert_almost_equal(-4.1538623012790161, result["att"].value)
+    assert_almost_equal(-4.1538623012790161, result.effect.value)
 
     sdid.error(result, JackKnife())
-    assert_almost_equal(17.867241960405, result["att"].se)
+    assert_almost_equal(17.867241960405, result.effect.se)
 
 
 def test_placebo_no_fail(sdid, data):
@@ -96,7 +96,7 @@ def test_correctness_comprehensive(sdid, df, correct):
     result = sdid.fit(panel)
     effect = result.effect
 
-    assert_almost_equal(correct["tau_hat"], effect["att"])
+    assert_almost_equal(correct["tau_hat"], effect.value)
 
     assert_almost_equal(correct["lambd"], effect["lambd"])
     assert_almost_equal(correct["f_min_lambd"], effect["solvers"]["lambd"]["f"].min())
@@ -107,7 +107,7 @@ def test_correctness_comprehensive(sdid, df, correct):
     sdid.error(result, JackKnife())
 
     if panel.n_treat > 1:
-        assert_almost_equal(correct["se"], result.effect["se"])
+        assert_almost_equal(correct["se"], result.effect.se)
 
 
 # @pytest.mark.parametrize("method", [Placebo(n_samples=5000),

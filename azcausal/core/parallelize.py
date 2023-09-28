@@ -7,15 +7,48 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 
 
+# ---------------------------------------------------------------------------------------------------------
+# Interface
+# ---------------------------------------------------------------------------------------------------------
+
 class Parallelize(object):
 
-    def __call__(self, func, args, total=None):
-        return self.run(func, args)
+    def __call__(self,
+                 func,
+                 iterable,
+                 total=None
+                 ) -> list:
+        return self.run(func, iterable)
 
     @abstractmethod
-    def run(self, func, args, total=None):
+    def run(self, func, iterable, total=None):
+        """
+        A parallelization method to run multiple methods in parallel.
+
+        Parameters
+        ----------
+        func
+            The function which takes exactly one argument
+
+        iterable
+            A generator or list object for which to run the function.
+
+        total
+            The number of elements returned by the generator (used for the progress bar if implemented)
+
+        Returns
+        -------
+        results
+            A list of objects returned in each function call.
+
+        """
+
         pass
 
+
+# ---------------------------------------------------------------------------------------------------------
+# Serial (not in parallel, simply using a for loop)
+# ---------------------------------------------------------------------------------------------------------
 
 class Serial(Parallelize):
 
@@ -36,6 +69,10 @@ class Serial(Parallelize):
         else:
             return [func(args) for args in iterable]
 
+
+# ---------------------------------------------------------------------------------------------------------
+# Pool (using Python's multithread/multiprocess)
+# ---------------------------------------------------------------------------------------------------------
 
 class Pool(Parallelize):
 
@@ -69,6 +106,10 @@ class Pool(Parallelize):
         else:
             return self.pool.map(func, iterable)
 
+
+# ---------------------------------------------------------------------------------------------------------
+# Joblib (third-party library)
+# ---------------------------------------------------------------------------------------------------------
 
 class Joblib(Parallelize):
 

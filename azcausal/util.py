@@ -1,3 +1,6 @@
+import os
+import sys
+import warnings
 from collections import defaultdict
 
 import numpy as np
@@ -82,7 +85,8 @@ def to_matrices(df, index, cols, *values, fillna=None):
     if not isinstance(fillna, dict):
         v = fillna
         fillna = defaultdict(lambda: v)
-    return tuple([to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values])
+
+    return {value: to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values}
 
 
 def to_balanced(dy):
@@ -136,7 +140,26 @@ def parse_arn(arn):
         'resource_type': None
     }
     if '/' in result['resource']:
-        result['resource_type'], result['resource'] = result['resource'].split('/',1)
+        result['resource_type'], result['resource'] = result['resource'].split('/', 1)
     elif ':' in result['resource']:
-        result['resource_type'], result['resource'] = result['resource'].split(':',1)
+        result['resource_type'], result['resource'] = result['resource'].split(':', 1)
     return result
+
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
+
+
+def nanmean(df, *args, **kwargs):
+    if len(df) == 0:
+        return np.nan
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        return np.nanmean(df, *args, **kwargs)

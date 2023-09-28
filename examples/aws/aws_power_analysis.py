@@ -5,17 +5,17 @@ import pandas as pd
 from arnparse import arnparse
 from botocore.config import Config
 
-from azcausal.cloud.client import AWSLambda, Client
-from azcausal.cloud.job import Job
+from azcausal.remote.client import AWSLambda, Client
+from azcausal.remote.job import Job
 from azcausal.core.parallelize import Joblib
-from azcausal.core.scenario import Scenario, Evaluator, power
+from azcausal.core.performance import power
 from azcausal.core.synth import SyntheticEffect
 from azcausal.data import CaliforniaProp99
 
 __ARN__ = "arn:aws:lambda:us-east-1:112353327285:function:azcausal-lambda-run:$LATEST"
 __S3__ = "s3://azcausal-aws-lambda"
 
-config = Config(connect_timeout=300, read_timeout=300)
+config = Config(connect_timeout=500, read_timeout=500, max_pool_connections=100)
 lambda_client = boto3.client('lambda', region_name=arnparse(__ARN__).region, config=config)
 
 
@@ -33,7 +33,7 @@ class MyJob(Job):
         return Result(result.effects)
 
 
-def f_estimate_aws(panel):
+def f_estimate(panel):
     endpoint = AWSLambda(lambda_client, __ARN__)
     client = Client(endpoint)
 
@@ -41,21 +41,26 @@ def f_estimate_aws(panel):
     job.upload(panel)
     client.send(job)
 
-    return job.result()
+    result = job.result()
+
+    job.delete()
+    job.delete(job.path_to_result)
+
+    return result
 
 
 if __name__ == "__main__":
 
-    f_estimate = f_estimate_aws
-
-    # the number of samples for the power (please increase for higher accuracy)
-    n_samples = 31
-
-    parallelize = Joblib(n_samples, progress=True)
+    # the pool for parallelization
+    pool = Joblib(n_jobs=31, progress=True)
 
     panel = CaliforniaProp99().panel()
     outcome = panel.outcome.loc[:, ~panel.w]
 
+    # the number of samples for the power (please increase for higher accuracy)
+    n_samples = 101
+
+    # create the intervention matrix
     intervention = np.zeros_like(outcome.values).astype(int)
     intervention[-10:, :2] = 1
 
@@ -69,11 +74,11 @@ if __name__ == "__main__":
         # create synthetic panels where the last 8 time s
         synth_effect = SyntheticEffect(outcome, treatment, intervention=intervention, mode='perc')
 
-        # run the power analysis
-        results = Scenario(f_estimate, synth_effect, f_eval=Evaluator(conf=90)).run(n_samples, parallelize=parallelize)
+        # estimate the treatment effect for different scenarios
+        results = pool.run(lambda seed: f_estimate(synth_effect.create(seed=seed).panel()), np.arange(n_samples))
 
-        # calculate the power from the results
-        pw = power(results)
+        # get the power from the results
+        pw = power(results, conf=90)
 
         print(f"Percentage Treatment Effect {att:.3f} | (-): {pw['-']:.3%}")
 

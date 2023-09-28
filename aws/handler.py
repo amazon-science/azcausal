@@ -1,5 +1,5 @@
 import json
-from azcausal.cloud.server import Server
+from azcausal.remote.server import Server
 
 
 def lambda_handler(event, _):

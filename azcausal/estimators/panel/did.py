@@ -49,46 +49,78 @@ def did_simple(pre_contr, post_contr, pre_treat, post_treat):
                 pre_contr=pre_contr, post_contr=post_contr, pre_treat=pre_treat, post_treat=post_treat)
 
 
+def did_from_data(dx: pd.DataFrame):
+    """
+    This method calculates the DID in total and also over time given a simple panels with the following columns
+        - C: The average outcomes of the control group
+        - T: The average outcomes of the treatment group
+        - W: Intervention represented by 0 if pre, 1 if post
+        - lambd: The time weights to be used
+
+    Parameters
+    ----------
+    dx
+        The data frame with the columns described above (C, T, W, lambd)
+
+    Returns
+    -------
+    did
+        A dictionary with the DID estimates.
+
+    by_time
+        The DID values of time.
+
+    """
+
+    # get the values for DID and get the estimate
+    pre_contr = (dx['C'] * dx['lambd']).sum()
+    post_contr = dx.query("W == 1")['C'].mean()
+    pre_treat = (dx['T'] * dx['lambd']).sum()
+    post_treat = dx.query("W == 1")['T'].mean()
+
+    # calculate the treatment effect using the DID equation
+    did = did_simple(pre_contr, post_contr, pre_treat, post_treat)
+
+    # creating the impact by time from the data frame
+    by_time = (dx
+               .assign(att=lambda x: ((x['T'] - pre_treat) - (x['C'] - pre_contr)).mask(x['W'] == 0))
+               .assign(CF=lambda x: x['T'] - x['att'].fillna(0.0))
+               )
+
+    return did, by_time
+
+
 class DID(Estimator):
 
-    def fit(self, panel, lambd=None):
+    def fit(self, panel, lambd=None, **kwargs):
 
-        # get the outcome values pre and post and contr and treat in a block each
-        Y_pre_treat, Y_post_treat, Y_pre_contr, Y_post_contr = panel.Y_as_block(trim=True)
-
-        # lambda can be set to define the weights in pre - otherwise it will be simply uniform
-        m = panel.n_pre
+        # time weights
+        pre = panel.time(pre=True)
         if lambd is None:
-            lambd = np.full(m, 1 / m)
+            # by default use uniform time weights
+            lambd = pd.Series(1 / len(pre), index=pre)
+        else:
+            # if weights are passed to the estimator already
+            lambd = pre.join(lambd).fillna(0.0)
 
-        assert len(lambd) == m, f"The input weights lambda must be the same length as pre experiment: {m}"
+        # get the averages for control and treatment
+        control = panel.get('outcome', contr=True).mean(axis=1).to_frame("C")
+        treatment = panel.get('outcome', treat=True).mean(axis=1).to_frame('T')
 
-        # difference for control regions
-        pre_contr = Y_pre_contr.mean(axis=0) @ lambd
-        post_contr = Y_post_contr.mean(axis=0).mean()
+        # create the data frame
+        dx = (control
+              .join(treatment)
+              .join(lambd.to_frame('lambd'), how='left')
+              .assign(W=lambda x: np.isnan(x['lambd']).astype(int))
+              )
 
-        # difference in treatment
-        pre_treat = Y_pre_treat.mean(axis=0) @ lambd
-        post_treat = Y_post_treat.mean(axis=0).mean()
+        # get the did estimates from the simple panel
+        did, by_time = did_from_data(dx)
 
-        # finally the difference in difference
-        did = did_simple(pre_contr, post_contr, pre_treat, post_treat)
+        data = dict(lambd=lambd, did=did)
+        att = Effect(did["att"], observed=did["post_treat"], by_time=by_time, data=data, name="ATT")
 
-        # create the data based on which did made the decision
-        W = (panel.time() >= panel.start).astype(int)
-        T = panel.Y(treat=True).mean(axis=0)
-        C = panel.Y(contr=True).mean(axis=0)
-        att = (Y_post_treat.mean(axis=0) - pre_treat) - (Y_post_contr.mean(axis=0) - pre_contr)
-
-        # prepare the data provided as output
-        by_time = pd.DataFrame(dict(time=panel.time(), C=C, T=T, W=W))
-        by_time.loc[W == 0, "lambd"] = lambd
-        by_time.loc[W == 1, "att"] = att
-        by_time["CF"] = by_time["T"] - by_time["att"].fillna(0.0)
-        by_time = by_time.set_index("time")
-
-        att = Effect(did["att"], observed=did["post_treat"], by_time=by_time, data=did, name="ATT")
-        return Result(dict(att=att), data=panel, estimator=self)
+        return Result(dict(att=att), panel=panel, estimator=self)
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
 
@@ -149,7 +181,7 @@ def did_regr(dy):
 
 
 class DIDRegressor(Estimator):
-    def fit(self, panel):
+    def fit(self, panel, **kwargs):
         # for the regression we need directly the data frame
         dy = panel.to_frame(index=False) if isinstance(panel, Panel) else panel
 
@@ -158,8 +190,12 @@ class DIDRegressor(Estimator):
         treated = dy.query("intervention == 1")
         observed = treated["outcome"].mean()
 
-        att = Effect(att, se=se, observed=observed, multiplier=len(treated), name="ATT")
-        return Result(dict(att=att), data=panel, estimator=self)
+        # calculate the degree of freedom for confidence intervals (if t-test is used)
+        n_time, n_units = dy.time.nunique(), dy.unit.nunique()
+        dof = (n_time * n_units) - (n_time + n_units) - 1
+
+        att = Effect(att, se=se, observed=observed, multiplier=len(treated), dof=dof, name="ATT")
+        return Result(dict(att=att), panel=panel, estimator=self)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -232,7 +268,7 @@ class EventStudy(Estimator):
         self.n_pre = n_pre
         self.exclude = exclude
 
-    def fit(self, panel):
+    def fit(self, panel, **kwargs):
 
         # since we use regression create the data frame from the panel (if not directly provided)
         dy = panel
@@ -250,7 +286,7 @@ class EventStudy(Estimator):
         dx = dz.query("intervention == 1")
         att = Effect(att, se=se, observed=dx["outcome"].mean(), multiplier=len(dx), by_time=by_time,
                      data=dict(regr=regr), name="ATT")
-        return Result(dict(att=att), data=panel, estimator=self)
+        return Result(dict(att=att), panel=panel, estimator=self)
 
     def plot(self, result, show=True, ax=None):
         data = result.effect.by_time

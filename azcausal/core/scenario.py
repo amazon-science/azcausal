@@ -1,64 +1,87 @@
-from collections import Counter
+import json
+from os import makedirs
+from os.path import exists, join
 
-from azcausal.core.parallelize import Serial, Parallelize
+import pandas as pd
 
-
-class Evaluator:
-
-    def __init__(self, conf=90) -> None:
-        super().__init__()
-        self.conf = conf
-
-    def __call__(self, synth_effect):
-        true = synth_effect['correct']['effect']
-        pred = synth_effect['result'].effect
-        ci = pred.ci(conf=self.conf)
-
-        perc_true = true.percentage()
-        perc_pred = pred.percentage(counter_factual=true.counter_factual)
-        perc_ci = perc_pred.ci(conf=self.conf)
-
-        res = {
-            **synth_effect['tags'],
-            'abs': {
-                'att': pred.value,
-                'se': pred.se,
-                'lb': ci[0],
-                'ub': ci[1],
-                'true_att': true.value,
-            },
-            'perc': {
-                'att': perc_pred.value,
-                'se': perc_pred.se,
-                'lb': perc_ci[0],
-                'ub': perc_ci[1],
-                'true_att': perc_true.value,
-            },
-            'sign': pred.sign(conf=self.conf),
-
-        }
-        return res
+from azcausal.core.estimator import results_from_outcome
+from azcausal.core.panel import Panel
+from azcausal.core.result import Result
 
 
-class Scenario:
+class Scenario(object):
 
-    def __init__(self, f_estimate, synth_effect, f_eval=Evaluator(), **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.f_estimate = f_estimate
-        self.synth_effect = synth_effect
-        self.f_eval = f_eval
-
-    def run(self, n_samples, parallelize: Parallelize = Serial()):
-        def f(synth_effect):
-            synth_effect['result'] = self.f_estimate(synth_effect['panel'])
-            return self.f_eval(synth_effect)
-
-        f_effects = self.synth_effect.generator(n_samples)
-
-        return parallelize(f, f_effects, total=n_samples)
+    def __init__(self,
+                 true_outcome: pd.DataFrame,
+                 treated_outcome: pd.DataFrame,
+                 intervention: pd.DataFrame,
+                 tags: dict = None
+                 ) -> None:
+        """
 
 
-def power(results):
-    counts = Counter([e['sign'] for e in results])
-    return {s: counts[s] / len(results) for s in ['+', '+/-', '-']}
+        Parameters
+        ----------
+        true_outcome
+            The outcome without any effect (ground truth)
+
+        treated_outcome
+            The outcome where the intervention has taken place.
+
+        intervention
+            A dataframe indicating what time-unit cells have been treated (0: no intervention; 1: intervention)
+
+        tags
+            Additional keywords representing this scenario.
+
+        """
+        self.true_outcome = true_outcome
+        self.treated_outcome = treated_outcome
+        self.intervention = intervention
+        self.tags = tags
+
+    def result(self) -> Result:
+        """
+        The expected result for this scenario.
+        """
+        return results_from_outcome(self.treated_outcome, self.true_outcome, self.intervention)
+
+    def panel(self) -> Panel:
+        return Panel(self.treated_outcome, self.intervention)
+
+    # store a scenario in a folder.
+    def save(self, path: str) -> None:
+
+        if not exists(path):
+            makedirs(path, exist_ok=True)
+
+        for name in ['true_outcome', 'treated_outcome', 'intervention']:
+            obj = self.__dict__.get(name)
+            if obj is not None:
+                obj.to_csv(join(path, f"{name}.csv"))
+
+        with open(join(path, f"tags.csv"), "w") as outfile:
+            json.dump(self.tags, outfile)
+
+    @classmethod
+    # load a scenario from a folder
+    def load(cls, path):
+        args = []
+        for name in ['true_outcome', 'treated_outcome', 'intervention']:
+            obj = None
+
+            file = join(path, f"{name}.csv")
+            if exists(file):
+                obj = pd.read_csv(file, index_col=0, parse_dates=True)
+
+            args.append(obj)
+
+        tags = None
+        file = join(path, f"tags.csv")
+        if exists(file):
+            with open(join(path, f"tags.csv"), "r") as f:
+                tags = json.loads(f.read())
+
+        return cls(*args, tags=tags)
+
 

@@ -2,7 +2,7 @@ import boto3
 from arnparse import arnparse
 from botocore.config import Config
 
-from azcausal.cloud.client import AWSLambda, Client
+from azcausal.remote.client import AWSLambda, Client
 
 
 class Function:

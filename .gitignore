@@ -9,6 +9,9 @@ aws/azcausal-*
 *.csv
 *.parquet
 *.dta
+*.swp
+
+
 
 
 # Byte-compiled / optimized / DLL files
@@ -22,6 +25,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+benchmark/
 develop-eggs/
 dist/
 downloads/

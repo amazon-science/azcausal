@@ -5,6 +5,10 @@ def wfill(s, n):
 class Output:
 
     def __init__(self, buffer=None) -> None:
+        """
+        An output object which allows to format the output and provides convenience for creating a table like printout.
+        """
+
         super().__init__()
         self.width = 80
 
@@ -13,17 +17,27 @@ class Output:
 
         self.buffer = buffer
 
-    def write(self, line=""):
+    def write(self,
+              line: str = ""):
         self.buffer.append(line)
         return line
 
-    def append(self, output, inplace=False):
+    def append(self, output, inplace: bool = False):
         if inplace:
             return self.buffer.extend(output.buffer)
         else:
             return Output(buffer=self.buffer + output.buffer)
 
-    def line(self, text=None, prefix='|', suffix='|', padding=2, fill=" ", align="center", margin=0, write=True):
+    def line(self,
+             text: str = None,
+             prefix: str = '|',
+             suffix: str = '|',
+             padding: int = 2,
+             fill: str = " ",
+             align: str = "center",
+             margin: int = 0,
+             write: bool
+             = True):
 
         s = str(text) if text is not None else ""
         if len(s) > 0:
@@ -71,7 +85,10 @@ class Output:
         self.write()
         return self
 
-    def text(self, text, align="left", **kwargs):
+    def text(self,
+             text: str,
+             align: str = "left",
+             **kwargs):
         self.line(text=text, align=align, **kwargs)
         return self
 

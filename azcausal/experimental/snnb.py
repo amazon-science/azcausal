@@ -5,7 +5,7 @@ try:
     from cachetools import cached
     from cachetools.keys import hashkey
 except:
-    raise ("SNNB requires additional libararies. Please run pip install azcausal[snnb]")
+    raise "SNNB requires additional libraries. Please run pip install azcausal[snnb]"
 
 import copy
 import warnings
@@ -21,15 +21,6 @@ from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
 from azcausal.core.panel import Panel
 from azcausal.core.result import Result
-
-
-def nanmean(df, *args, **kwargs):
-    if len(df) == 0:
-        return np.nan
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        return np.nanmean(df, *args, **kwargs)
 
 
 class SNNB(Estimator):
@@ -122,7 +113,7 @@ class SNNB(Estimator):
         self.n_estimates: int = n_estimates
         self.clusters_hashes: set = None
 
-    def refit(self, result):
+    def refit(self, result, **kwargs):
 
         def f(panel):
             return copy.deepcopy(result.estimator).fit(panel)
@@ -138,7 +129,10 @@ class SNNB(Estimator):
         assert panel.n_treatments() == 1, "Currently only a single type of intervention is supported. " \
                                           "Please make sure your panel contains only 0s and 1s. "
 
+        outcome, intervention = panel.outcome, panel.intervention
+
         # create a tensor from the panel data
+        _tensor = [outcome.mask(intervention != treatment).values for treatment in np.unique(intervention)]
         tensor = self._get_tensor(panel)
 
         filled, feas = self._fit(tensor)
@@ -169,7 +163,7 @@ class SNNB(Estimator):
         T = panel.outcome.values[panel.intervention == 1].mean()
         att = Effect(att, observed=T, multiplier=panel.n_interventions(), by_time=by_time, by_unit=ite,
                      data=dict(imputed=imputed), name="ATT")
-        return Result(dict(att=att), data=panel, estimator=self)
+        return Result(dict(att=att), panel=panel, estimator=self)
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
 

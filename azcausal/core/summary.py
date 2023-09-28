@@ -1,41 +1,51 @@
-from copy import deepcopy
-
 from azcausal.core.output import Output
 
 
 class Summary:
 
     def __init__(self,
-                 sections,
-                 title=None,
-                 output=Output()) -> None:
+                 sections: list,
+                 title: str = None) -> None:
+        """
+        A summary object can be used to format multiple sections into one output and conveniently adding
+        header, footer, as well as separation lines.
+
+        Parameters
+        ----------
+        sections
+            A list of sections that should be printed.
+
+        title
+            What title should be printed in the header.
+
+        """
 
         super().__init__()
         self.title = title
         self.sections = sections
-        self.output = deepcopy(output)
-
-    def header(self):
-        self.output.tline()
-
-    def footer(self):
-        self.output.bline()
 
     def __str__(self):
 
-        self.header()
+        # create a new output object
+        output = Output()
 
+        # print the top line
+        output.tline()
+
+        # print a header section if a title is provided
         if self.title is not None:
-            self.output.text(self.title, align="center")
-            self.output.hrule()
+            output.text(self.title, align="center")
+            output.hrule()
 
+        # for each section that is given
         for i, section in enumerate(self.sections):
-            self.output.append(section, inplace=True)
+            output.append(section, inplace=True)
 
+            # always except for the last iteration
             if i < len(self.sections) - 1:
-                self.output.hline()
+                output.hline()
 
-        self.footer()
+        # print a footer section
+        output.bline()
 
-        return str(self.output)
-
+        return str(output)

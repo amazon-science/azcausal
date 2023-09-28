@@ -15,6 +15,10 @@ class Job:
 
         self.path = path
 
+    @property
+    def path_to_result(self):
+        return self.path + ".result"
+
     def s3(self):
         return s3fs.S3FileSystem(anon=False)
 
@@ -40,13 +44,14 @@ class Job:
 
         self.s3().delete(path)
 
+    # this function call happens in the AWS Lambda function call
     def __call__(self):
         obj = self.download()
         res = self.run(obj)
-        self.upload(res, path=self.path + ".result")
+        self.upload(res, path=self.path_to_result)
 
     def result(self):
-        return self.download(path=self.path + ".result")
+        return self.download(path=self.path_to_result)
 
     def run(self, obj):
         pass

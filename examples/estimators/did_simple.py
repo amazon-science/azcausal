@@ -25,5 +25,5 @@ if __name__ == '__main__':
     estimator.error(result, method, parallelize=pool)
 
     # print out information about the estimate
-    print(result.summary(title="CaliforniaProp99"))
+    print(result.summary(title="CaliforniaProp99", conf=90))
 

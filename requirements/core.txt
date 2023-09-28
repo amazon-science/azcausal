@@ -3,6 +3,7 @@ pandas
 scipy
 tqdm
 matplotlib
+seaborn
 statsmodels
 linearmodels
 joblib >= 1.3

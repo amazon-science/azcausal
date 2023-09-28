@@ -1,9 +1,7 @@
 import pytest
-from numpy.random import RandomState
-from numpy.testing import assert_almost_equal
 
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.snnb import SNNB
+from azcausal.estimators.panel.snn import SNN
 
 
 @pytest.fixture
@@ -11,8 +9,8 @@ def panel():
     return CaliforniaProp99().panel()
 
 
-def test_snnb(panel):
-    estimator = SNNB(random_state=RandomState(42))
+def test_snn(panel):
+    estimator = SNN()
     result = estimator.fit(panel)
     assert (-30 < result.effect.value < -20)
 
