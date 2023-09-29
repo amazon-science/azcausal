@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Part III: Analysis &amp; Visualization &mdash; azcausal 0.2.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/nbsphinx-code-cells.css" type="text/css" />
+    <link rel="shortcut icon" href="../_static/logo.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="../_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Estimators" href="../estimators/estimators.html" />
+    <link rel="prev" title="Part II: The Treatment Effect" href="part2.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.2.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#PyPi">PyPi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#Github">Github</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation.html#Development">Development</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#Version">Version</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="getting_started.html">Getting Started</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="part1.html">Part I: The Panel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="part2.html">Part II: The Treatment Effect</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Part III: Analysis &amp; Visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../estimators/estimators.html">Estimators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../estimators/did.html">Difference-in-Difference (DID)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../estimators/did.html#Panel">Panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../estimators/did.html#Regression">Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../estimators/did.html#Event-Study">Event Study</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../estimators/sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../estimators/snn.html">Synthetic Nearest Neighbor (SNN)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../error.html">Error</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../error.html#Bootstrap">Bootstrap</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../error.html#Random">Random</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../error.html#Stratified">Stratified</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../error.html#Bayes">Bayes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../error.html#Placebo">Placebo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../error.html#JackKnife">JackKnife</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../power.html">Power Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../parallelization.html">Parallelization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../parallelization.html#Serial">Serial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parallelization.html#Pool">Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parallelization.html#Joblib">Joblib</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">azcausal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="getting_started.html">Getting Started</a></li>
+      <li class="breadcrumb-item active">Part III: Analysis &amp; Visualization</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/amazon-science/azcausal/blob/main/docs/source/getting_started/part3.ipynb" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Part-III:-Analysis-&amp;-Visualization">
+<h1>Part III: Analysis &amp; Visualization<a class="headerlink" href="#Part-III:-Analysis-&-Visualization" title="Link to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">%%capture</span>
+<span class="o">%</span><span class="n">run</span> <span class="o">./</span><span class="n">part2</span><span class="o">.</span><span class="n">ipynb</span>
+</pre></div>
+</div>
+</div>
+<p>Lastly, we want to give some idea on how to visualize results.</p>
+<p>To learn more about how the error estimation was originally derived, we can check the corresponding distribution by plotting the estimates of each of the runs:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">vv</span> <span class="o">=</span> <span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">effect</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">]</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">vv</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;AxesSubplot: ylabel=&#39;Count&#39;&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/getting_started_part3_4_1.png" src="../_images/getting_started_part3_4_1.png" />
+</div>
+</div>
+<p>Each post-analysis will be different depending on the estimator. We would like a give an example of <code class="docutils literal notranslate"><span class="pre">SDID</span></code> here. The available additional information stored by the estimator are:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">effect</span>
+
+<span class="n">effect</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;lambd&#39;, &#39;omega&#39;, &#39;solvers&#39;, &#39;did&#39;, &#39;error&#39;])
+</pre></div></div>
+</div>
+<p>The DID results give us additional information about how the ATT is actually calculated:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;did&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[36]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;att&#39;: -15.603827872733866,
+ &#39;delta_contr&#39;: -19.19204093267264,
+ &#39;delta_treat&#39;: -34.795868805406506,
+ &#39;pre_contr&#39;: 120.49828909527162,
+ &#39;post_contr&#39;: 101.30624816259898,
+ &#39;pre_treat&#39;: 95.14586886957318,
+ &#39;post_treat&#39;: 60.35000006416667}
+</pre></div></div>
+</div>
+<p>The unit weights (<code class="docutils literal notranslate"><span class="pre">omega</span></code>) with at least 1% contribution</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;omega&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">0.01</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+State
+Nevada            0.124489
+New Hampshire     0.105048
+Connecticut       0.078287
+Delaware          0.070368
+Colorado          0.057513
+Illinois          0.053388
+Nebraska          0.047853
+Montana           0.045135
+Utah              0.041518
+New Mexico        0.040568
+Minnesota         0.039495
+Wisconsin         0.036667
+West Virginia     0.033569
+North Carolina    0.032805
+Idaho             0.031468
+Ohio              0.031461
+Maine             0.028211
+Iowa              0.025939
+Kansas            0.021605
+Pennsylvania      0.015352
+Indiana           0.010135
+Name: omega, dtype: float64
+</pre></div></div>
+</div>
+<p>Similarly, the time weights</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;lambd&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">0.01</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1988    0.427076
+1986    0.366471
+1987    0.206453
+Name: lambd, dtype: float64
+</pre></div></div>
+</div>
+<p>Or in general the treatment effect over time:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Control (C), Treatment (T), Time Weights (lambd), Intervention (W), Average Treatment Effect on the Treated (att), Counter Factual (CF)</span>
+<span class="n">effect</span><span class="o">.</span><span class="n">by_time</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>C</th>
+      <th>T</th>
+      <th>lambd</th>
+      <th>W</th>
+      <th>att</th>
+      <th>CF</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1996</th>
+      <td>99.202557</td>
+      <td>54.500000</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-19.350137</td>
+      <td>73.850137</td>
+    </tr>
+    <tr>
+      <th>1997</th>
+      <td>100.035935</td>
+      <td>53.799999</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-20.883516</td>
+      <td>74.683515</td>
+    </tr>
+    <tr>
+      <th>1998</th>
+      <td>100.433993</td>
+      <td>52.299999</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-22.781573</td>
+      <td>75.081573</td>
+    </tr>
+    <tr>
+      <th>1999</th>
+      <td>98.497346</td>
+      <td>47.200001</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-25.944925</td>
+      <td>73.144926</td>
+    </tr>
+    <tr>
+      <th>2000</th>
+      <td>91.437300</td>
+      <td>41.599998</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-24.484882</td>
+      <td>66.084880</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[69]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="o">.</span><span class="n">by_time</span><span class="p">[[</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;CF&#39;</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[69]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;AxesSubplot: xlabel=&#39;Year&#39;&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/getting_started_part3_15_1.png" src="../_images/getting_started_part3_15_1.png" />
+</div>
+</div>
+<p>Some estimators will have directly a plotting method for the result:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[65]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">estimator</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">CF</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kc">None</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/getting_started_part3_17_0.png" src="../_images/getting_started_part3_17_0.png" />
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="part2.html" class="btn btn-neutral float-left" title="Part II: The Treatment Effect" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../estimators/estimators.html" class="btn btn-neutral float-right" title="Estimators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

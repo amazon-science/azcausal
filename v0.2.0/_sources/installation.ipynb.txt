@@ -1,0 +1,214 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "79fc8397",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "## Installation"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b320522b-cf9b-4685-b941-3dbf4fb97ff5",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    "There are different options available to install the framework: PyPi (stable) and GitHub (development). \n",
+    "\n",
+    "Moreover, azcausal has a modular dependency management. By default `core` is used to install dependencies covering the most important functionalities. However, some estimators or functions might require additional libraries. To not worry about any dependency, feel free to use the `full` keyword which includes any type of library being used."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d862d36a-6fa2-4e78-bc83-33d2bdbb37d5",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### PyPi"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d03ac48b-7059-4e5a-94aa-6beeb7f41912",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "For the latest stable release please use the official Python package manager:"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "2054ccf8-e243-47ee-80f9-cda9739f454d",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. code:: bash\n",
+    "\n",
+    "    pip install -U azcausal"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "11dbfa5a-4afc-4ac9-b2e3-bd02516bd209",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "To install the *all* dependencies for all estimators and aws support please use:"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "013103a1-238c-4a18-98d8-706af45cae77",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. code:: bash\n",
+    "\n",
+    "    pip install -U azcausal[full]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3f7f8394-ec4d-495d-a0ed-814de38645aa",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### Github"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4f99ce09-a4f8-433d-94d7-0e6721954380",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "#### Development"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "597bc96a-c800-4fd1-8cd1-8a94920410a9",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "To install the current development version from the main branch:"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "c151fc44",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. code:: bash\n",
+    "\n",
+    "    pip install git+https://github.com/amazon-science/azcausal.git"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "25bc2dc2-59bb-469a-a950-55330c2b36a4",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "Also, when installing from GitHub the dependencies can be specified:"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "43c12a20-3775-47be-9983-5ec56de87dc6",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. code:: bash\n",
+    "\n",
+    "    pip install -e \"git+https://github.com/amazon-science/azcausal.git#egg=azcausal[core]\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "546f22a0-67eb-4e31-ae02-3ca4cb087bc9",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "### Version"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3f48b0e2-c37c-4fa4-b6e6-bd118c67eb75",
+   "metadata": {
+    "tags": []
+   },
+   "source": [
+    "To install a specific version, the Github tag function can be used. For instance, to install **v0.1** you can use the following command:"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "894f7eed-404d-4c4c-b6f7-0834b36779f6",
+   "metadata": {
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. code:: bash\n",
+    "\n",
+    "    pip install git+https://github.com/amazon-science/azcausal.git@v0.1"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 1.529092,
+   "end_time": "2023-09-28T19:27:08.524824",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/workspace/azcausal/docs/source/installation.ipynb",
+   "output_path": "/Users/blankjul/workspace/azcausal/docs/source/installation.ipynb",
+   "parameters": {},
+   "start_time": "2023-09-28T19:27:06.995732",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

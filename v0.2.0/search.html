@@ -3,20 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search &mdash; azcausal 0.1.1 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Search &mdash; azcausal 0.2.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/logo.ico"/>
     
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="_static/copybutton.js?v=f281be69"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "tex2jax_ignore|mathjax_ignore|document", "processClass": "tex2jax_process|mathjax_process|math|output_area"}})</script>
     <script src="_static/js/theme.js"></script>
     <script src="_static/searchtools.js"></script>
     <script src="_static/language_data.js"></script>
@@ -32,9 +36,13 @@
 
           
           
-          <a href="index.html" class="icon icon-home">
-            azcausal
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Logo"/>
           </a>
+              <div class="version">
+                0.2.0
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="#" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -45,26 +53,52 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#PyPi">PyPi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Github">Github</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#Development">Development</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Introduction</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="introduction/installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="introduction/getting_started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="introduction/about.html">About</a></li>
-<li class="toctree-l1"><a class="reference internal" href="introduction/license.html">License</a></li>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Version">Version</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Estimators</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="estimators/did.html">Difference-in-Difference (DID)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="estimators/sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="estimators/snnb.html">Synthetic Nearest Neighbor Biclustering (SNNB)</a></li>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started/getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started/part1.html">Part I: The Panel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started/part2.html">Part II: The Treatment Effect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started/part3.html">Part III: Analysis &amp; Visualization</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Tutorials</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="tutorials/error.html">Estimation Error</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials/event.html">Event Study</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials/power.html">Statistical Power</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials/parallelization.html">Parallelization</a></li>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="estimators/estimators.html">Estimators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="estimators/did.html">Difference-in-Difference (DID)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Panel">Panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Regression">Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Event-Study">Event Study</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/snn.html">Synthetic Nearest Neighbor (SNN)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="error.html">Error</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Bootstrap">Bootstrap</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Random">Random</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Stratified">Stratified</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Bayes">Bayes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Placebo">Placebo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#JackKnife">JackKnife</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="power.html">Power Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallelization.html">Parallelization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Serial">Serial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Pool">Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Joblib">Joblib</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
 </ul>
 
         </div>
@@ -110,7 +144,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Julian Blank.</p>
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
