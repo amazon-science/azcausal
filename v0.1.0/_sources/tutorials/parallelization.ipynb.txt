@@ -1,0 +1,380 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "88447df3",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008058,
+     "end_time": "2023-10-02T23:48:39.634109",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.626051",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Parallelization"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a7a188da-531d-447c-9748-7614163587cb",
+   "metadata": {
+    "papermill": {
+     "duration": 0.003154,
+     "end_time": "2023-10-02T23:48:39.641581",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.638427",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For the `Parallelization` in this framework, we need two define to things:\n",
+    "\n",
+    "- A Function receiving exactly one parameters and return an output\n",
+    "- A Generator that yields inputs"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "674e4d65-5d21-43af-884f-648f71b18ff7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:39.650047Z",
+     "iopub.status.busy": "2023-10-02T23:48:39.649673Z",
+     "iopub.status.idle": "2023-10-02T23:48:39.659399Z",
+     "shell.execute_reply": "2023-10-02T23:48:39.658901Z"
+    },
+    "papermill": {
+     "duration": 0.015508,
+     "end_time": "2023-10-02T23:48:39.661219",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.645711",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# FUNCTION\n",
+    "def f(x):\n",
+    "    return sum([x + k for k in range(1000)])\n",
+    "\n",
+    "#GENERATOR\n",
+    "def g():\n",
+    "    for i in range(10):\n",
+    "        yield i"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e5215920-2fd8-422a-941b-5f069b1816b1",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002002,
+     "end_time": "2023-10-02T23:48:39.665444",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.663442",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Then, we can use the parallelization implementation to run the function for each paramter returned in the generator."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "04be00d5-d79a-4e64-8c4f-0ba4c39e0f66",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001778,
+     "end_time": "2023-10-02T23:48:39.669017",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.667239",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Serial"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0aeee63c-89d4-4082-8512-e35bfbf9cee7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001771,
+     "end_time": "2023-10-02T23:48:39.672570",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.670799",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "This does not parallelize but just runs a `for` loop. This is often used as a dummy by default."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "dc87d7a8-01fa-49e5-82b2-1db90953989e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:39.676839Z",
+     "iopub.status.busy": "2023-10-02T23:48:39.676634Z",
+     "iopub.status.idle": "2023-10-02T23:48:39.700312Z",
+     "shell.execute_reply": "2023-10-02T23:48:39.699929Z"
+    },
+    "papermill": {
+     "duration": 0.027218,
+     "end_time": "2023-10-02T23:48:39.701469",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.674251",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[499500,\n",
+       " 500500,\n",
+       " 501500,\n",
+       " 502500,\n",
+       " 503500,\n",
+       " 504500,\n",
+       " 505500,\n",
+       " 506500,\n",
+       " 507500,\n",
+       " 508500]"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.parallelize import Serial\n",
+    "\n",
+    "parallelize = Serial()\n",
+    "\n",
+    "parallelize(f, g())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cf38731f-2bbe-4cb5-b9d4-0e7eeb87a5fd",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001335,
+     "end_time": "2023-10-02T23:48:39.704398",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.703063",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Pool"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a02334b2-33b7-4c42-95e8-ff96b60f7c2a",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001392,
+     "end_time": "2023-10-02T23:48:39.707118",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.705726",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The `Pool` uses the Python implementation of threads or processes to run tasks in parallel."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "ad092ea7-46b5-4bde-a5ba-1d4e8c21e152",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:39.710629Z",
+     "iopub.status.busy": "2023-10-02T23:48:39.710467Z",
+     "iopub.status.idle": "2023-10-02T23:48:39.727385Z",
+     "shell.execute_reply": "2023-10-02T23:48:39.726941Z"
+    },
+    "papermill": {
+     "duration": 0.020065,
+     "end_time": "2023-10-02T23:48:39.728566",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.708501",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[499500,\n",
+       " 500500,\n",
+       " 501500,\n",
+       " 502500,\n",
+       " 503500,\n",
+       " 504500,\n",
+       " 505500,\n",
+       " 506500,\n",
+       " 507500,\n",
+       " 508500]"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.parallelize import Pool\n",
+    "\n",
+    "# please just for mode `thread` or `process`\n",
+    "mode = 'thread'\n",
+    " \n",
+    "# the number of workers (by default #cores-1)\n",
+    "max_workers = None\n",
+    "\n",
+    "parallelize = Pool(mode=mode, max_workers=max_workers)\n",
+    "\n",
+    "parallelize(f, g())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "51bad57d-9de5-4e00-a880-d5b04f216285",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001472,
+     "end_time": "2023-10-02T23:48:39.731689",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.730217",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Joblib"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "510240c4-4c95-4522-a883-9fbcd0f21bd7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001428,
+     "end_time": "2023-10-02T23:48:39.734653",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.733225",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Uses the well-known `Joblib` implementation for parallelization."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "579317af-ea27-4f7c-9e31-9bf3dfa759ca",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:39.738719Z",
+     "iopub.status.busy": "2023-10-02T23:48:39.738518Z",
+     "iopub.status.idle": "2023-10-02T23:48:39.743399Z",
+     "shell.execute_reply": "2023-10-02T23:48:39.743074Z"
+    },
+    "papermill": {
+     "duration": 0.008522,
+     "end_time": "2023-10-02T23:48:39.744620",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:39.736098",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[499500,\n",
+       " 500500,\n",
+       " 501500,\n",
+       " 502500,\n",
+       " 503500,\n",
+       " 504500,\n",
+       " 505500,\n",
+       " 506500,\n",
+       " 507500,\n",
+       " 508500]"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.parallelize import Joblib\n",
+    "\n",
+    "n_jobs = None\n",
+    "\n",
+    "parallelize = Joblib(n_jobs=n_jobs)\n",
+    "\n",
+    "parallelize(f, g())"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.16"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 4.274569,
+   "end_time": "2023-10-02T23:48:42.367287",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/tutorials/parallelization.ipynb",
+   "output_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/tutorials/parallelization.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:48:38.092718",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

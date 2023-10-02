@@ -1,0 +1,574 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "401d28a6",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00845,
+     "end_time": "2023-10-02T23:29:10.855520",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:10.847070",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Error"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ecd6c81b-e305-4cd9-acfa-61d9b12ee252",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00325,
+     "end_time": "2023-10-02T23:29:10.863257",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:10.860007",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Out of the books different ways of measearing the estimation error of an estimator are supported."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "7d1fa6c3-ed94-4b8c-9309-64628e60be42",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:10.870744Z",
+     "iopub.status.busy": "2023-10-02T23:29:10.870420Z",
+     "iopub.status.idle": "2023-10-02T23:29:11.739724Z",
+     "shell.execute_reply": "2023-10-02T23:29:11.739329Z"
+    },
+    "papermill": {
+     "duration": 0.874527,
+     "end_time": "2023-10-02T23:29:11.741025",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:10.866498",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect: -27.35                                                              |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.parallelize import Joblib\n",
+    "from azcausal.data import CaliforniaProp99\n",
+    "from azcausal.estimators.panel.did import DID\n",
+    "\n",
+    "panel = CaliforniaProp99().panel()\n",
+    "\n",
+    "# initialize an estimator object, here difference in difference (did)\n",
+    "estimator = DID()\n",
+    "\n",
+    "# run the estimator\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "print(result.summary(percentage=False))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "81c05cad-4416-4b8e-ac60-c8e6519ad804",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:11.745467Z",
+     "iopub.status.busy": "2023-10-02T23:29:11.745306Z",
+     "iopub.status.idle": "2023-10-02T23:29:11.748192Z",
+     "shell.execute_reply": "2023-10-02T23:29:11.747860Z"
+    },
+    "papermill": {
+     "duration": 0.006312,
+     "end_time": "2023-10-02T23:29:11.749311",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:11.742999",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "def plot_error_distribution(runs):\n",
+    "\n",
+    "    plt.subplots(1, 1, figsize=(12,2))\n",
+    "    x = np.array([result.effect.value for result in runs])\n",
+    "    plt.hist(x, bins=31, color='blue')\n",
+    "    plt.axvline(x.mean(), color='red')\n",
+    "\n",
+    "    return x.mean(), x.std()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a0575219",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001559,
+     "end_time": "2023-10-02T23:29:11.752560",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:11.751001",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Bootstrap"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f0b34c09-717d-4adf-b53d-7f0dc53fff8b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001548,
+     "end_time": "2023-10-02T23:29:11.755649",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:11.754101",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Random"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "56f037b9-e389-4604-b703-f802664e4584",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:11.759525Z",
+     "iopub.status.busy": "2023-10-02T23:29:11.759357Z",
+     "iopub.status.idle": "2023-10-02T23:29:14.001015Z",
+     "shell.execute_reply": "2023-10-02T23:29:14.000542Z"
+    },
+    "papermill": {
+     "duration": 2.245446,
+     "end_time": "2023-10-02T23:29:14.002598",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:11.757152",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±2.6887)                                              |\n",
+      "|  Confidence Interval (95%): [-32.62 , -22.08]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(-27.422799908889886, 2.6887234263243496)"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "\n",
+    "method = Bootstrap(n_samples=500)\n",
+    "se, runs = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))\n",
+    "\n",
+    "plot_error_distribution(runs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "300039c0-7129-48c9-9941-6f6f0559dfbc",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001821,
+     "end_time": "2023-10-02T23:29:14.006684",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:14.004863",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Stratified"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "a178f90e-782d-44c4-a2ad-ae1934d57bb3",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:14.011146Z",
+     "iopub.status.busy": "2023-10-02T23:29:14.010969Z",
+     "iopub.status.idle": "2023-10-02T23:29:16.336985Z",
+     "shell.execute_reply": "2023-10-02T23:29:16.336561Z"
+    },
+    "papermill": {
+     "duration": 2.329783,
+     "end_time": "2023-10-02T23:29:16.338318",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:14.008535",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±2.8290)                                              |\n",
+      "|  Confidence Interval (95%): [-32.89 , -21.80]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(-27.231918765696616, 2.8290368060340234)"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "\n",
+    "method = Bootstrap(n_samples=500, mode='stratified')\n",
+    "se, runs = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))\n",
+    "\n",
+    "plot_error_distribution(runs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f48415e8-1be3-4bd4-8467-8b09a2f410e8",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001853,
+     "end_time": "2023-10-02T23:29:16.342384",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:16.340531",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "#### Bayes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "bf15d834-fc17-43ab-8dd4-f92af48caffa",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:16.347041Z",
+     "iopub.status.busy": "2023-10-02T23:29:16.346871Z",
+     "iopub.status.idle": "2023-10-02T23:29:19.687142Z",
+     "shell.execute_reply": "2023-10-02T23:29:19.686721Z"
+    },
+    "papermill": {
+     "duration": 3.344137,
+     "end_time": "2023-10-02T23:29:19.688447",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:16.344310",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±0.214710)                                            |\n",
+      "|  Confidence Interval (95%): [-27.77 , -26.93]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(-27.35399301814831, 0.2147104861665935)"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "\n",
+    "method = Bootstrap(n_samples=500, mode='bayes', alpha=4.0)\n",
+    "se, runs = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))\n",
+    "\n",
+    "plot_error_distribution(runs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3c78d751",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001992,
+     "end_time": "2023-10-02T23:29:19.692827",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:19.690835",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Placebo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "178819ae-c528-4d81-8d4c-0eaef7538f76",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:19.697538Z",
+     "iopub.status.busy": "2023-10-02T23:29:19.697371Z",
+     "iopub.status.idle": "2023-10-02T23:29:21.830672Z",
+     "shell.execute_reply": "2023-10-02T23:29:21.830239Z"
+    },
+    "papermill": {
+     "duration": 2.137209,
+     "end_time": "2023-10-02T23:29:21.831985",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:19.694776",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±17.17)                                               |\n",
+      "|  Confidence Interval (95%): [-61.01 , 6.3120]                         (+/-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(0.30841728848697836, 17.174356203889484)"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Placebo\n",
+    "\n",
+    "method = Placebo(n_samples=500)\n",
+    "se, runs = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))\n",
+    "\n",
+    "plot_error_distribution(runs)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5952186b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002154,
+     "end_time": "2023-10-02T23:29:21.836688",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:21.834534",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### JackKnife"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "d69bb968-8991-49e3-ad49-112933eddee6",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:21.841701Z",
+     "iopub.status.busy": "2023-10-02T23:29:21.841411Z",
+     "iopub.status.idle": "2023-10-02T23:29:22.044239Z",
+     "shell.execute_reply": "2023-10-02T23:29:22.043854Z"
+    },
+    "papermill": {
+     "duration": 0.206839,
+     "end_time": "2023-10-02T23:29:22.045574",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:21.838735",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±2.7671)                                              |\n",
+      "|  Confidence Interval (95%): [-32.77 , -21.93]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "(-27.349111083614964, 0.4549157915454204)"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import JackKnife\n",
+    "\n",
+    "method = JackKnife()\n",
+    "se, runs = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))\n",
+    "\n",
+    "plot_error_distribution(runs)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.0"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 12.646817,
+   "end_time": "2023-10-02T23:29:22.367208",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/workspace/azcausal/docs/source/error.ipynb",
+   "output_path": "/Users/blankjul/workspace/azcausal/docs/source/error.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:29:09.720391",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

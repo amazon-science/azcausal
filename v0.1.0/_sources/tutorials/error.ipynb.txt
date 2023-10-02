@@ -1,0 +1,324 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "401d28a6",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007878,
+     "end_time": "2023-10-02T23:48:54.238000",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:54.230122",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Error"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ecd6c81b-e305-4cd9-acfa-61d9b12ee252",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002542,
+     "end_time": "2023-10-02T23:48:54.243715",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:54.241173",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Out of the books different ways of measearing the estimation error of an estimator are supported."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "7d1fa6c3-ed94-4b8c-9309-64628e60be42",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:54.249961Z",
+     "iopub.status.busy": "2023-10-02T23:48:54.249587Z",
+     "iopub.status.idle": "2023-10-02T23:48:55.212640Z",
+     "shell.execute_reply": "2023-10-02T23:48:55.212285Z"
+    },
+    "papermill": {
+     "duration": 0.967773,
+     "end_time": "2023-10-02T23:48:55.213774",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:54.246001",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect: -27.35                                                              |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "from azcausal.core.parallelize import Joblib\n",
+    "from azcausal.data import CaliforniaProp99\n",
+    "from azcausal.estimators.panel.did import DID\n",
+    "\n",
+    "panel = CaliforniaProp99().panel()\n",
+    "\n",
+    "# initialize an estimator object, here difference in difference (did)\n",
+    "estimator = DID()\n",
+    "\n",
+    "# run the estimator\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "print(result.summary(percentage=False))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a0575219",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001113,
+     "end_time": "2023-10-02T23:48:55.216360",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.215247",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Bootstrap"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "a178f90e-782d-44c4-a2ad-ae1934d57bb3",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:55.219249Z",
+     "iopub.status.busy": "2023-10-02T23:48:55.219093Z",
+     "iopub.status.idle": "2023-10-02T23:48:55.467108Z",
+     "shell.execute_reply": "2023-10-02T23:48:55.466757Z"
+    },
+    "papermill": {
+     "duration": 0.250864,
+     "end_time": "2023-10-02T23:48:55.468294",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.217430",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±3.1446)                                              |\n",
+      "|  Confidence Interval (95%): [-33.51 , -21.19]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "\n",
+    "method = Bootstrap(n_samples=101)\n",
+    "vals = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3c78d751",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001283,
+     "end_time": "2023-10-02T23:48:55.471199",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.469916",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Placebo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "178819ae-c528-4d81-8d4c-0eaef7538f76",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:55.474231Z",
+     "iopub.status.busy": "2023-10-02T23:48:55.474075Z",
+     "iopub.status.idle": "2023-10-02T23:48:55.739116Z",
+     "shell.execute_reply": "2023-10-02T23:48:55.738770Z"
+    },
+    "papermill": {
+     "duration": 0.267988,
+     "end_time": "2023-10-02T23:48:55.740348",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.472360",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±16.28)                                               |\n",
+      "|  Confidence Interval (95%): [-59.25 , 4.5502]                         (+/-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Placebo\n",
+    "\n",
+    "method = Placebo(n_samples=101)\n",
+    "vals = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5952186b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001226,
+     "end_time": "2023-10-02T23:48:55.743195",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.741969",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### JackKnife"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "d69bb968-8991-49e3-ad49-112933eddee6",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:55.746251Z",
+     "iopub.status.busy": "2023-10-02T23:48:55.746109Z",
+     "iopub.status.idle": "2023-10-02T23:48:55.849406Z",
+     "shell.execute_reply": "2023-10-02T23:48:55.849048Z"
+    },
+    "papermill": {
+     "duration": 0.10629,
+     "end_time": "2023-10-02T23:48:55.850667",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:55.744377",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±2.7671)                                              |\n",
+      "|  Confidence Interval (95%): [-32.77 , -21.93]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import JackKnife\n",
+    "\n",
+    "method = JackKnife()\n",
+    "vals = method.run(result)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(percentage=False))"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.16"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 3.497569,
+   "end_time": "2023-10-02T23:48:56.171169",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/tutorials/error.ipynb",
+   "output_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/tutorials/error.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:48:52.673600",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

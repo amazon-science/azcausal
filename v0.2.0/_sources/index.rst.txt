@@ -1,0 +1,114 @@
+
+
+Home
+====================================
+
+
+.. toctree::
+   :hidden:
+
+   self
+   installation
+   getting_started
+   estimators/estimators
+   error
+   power
+   parallelization
+   license
+   references
+
+
+A/B testing is widely used to determine the impact of new ideas and to decide on whether something is put in production in the long-term. Causal inference focuses on drawing conclusions based on observational data. Especially analyzing panel data (a data set with a unit and time dimension) can be challenging. For a general introduction into causal inference, we highly recommend having a look at the open-source book: `Causal Inference for The Brave and True <https://matheusfacure.github.io/python-causality-handbook/landing-page.html>`_.
+
+
+Installation
+********************************************************************************
+
+For the latest stable release please use the official Python package manager:
+
+.. code:: bash
+
+    pip install -U azcausal
+
+
+Estimators
+********************************************************************************
+
+
+
+
+azcausal is a toolkit for causal inference in general and provides implementations of well-known and widely used causal inference methods (e.g. DID, SDID). 
+
+
+.. list-table:: 
+    :widths: 20 10
+    :header-rows: 1
+
+    * - Estimator
+      - Reference
+    * - :ref:`Difference in Difference (DID)<did>` 
+      - 
+    * - :ref:`Synthetic Difference in Difference (SDID)<sdid>` 
+      - :cite:p:`sdid`
+    * - :ref:`Synthetic Nearest Neighbor (SNN)<snn>`
+      - :cite:p:`snn`
+
+
+
+Features
+********************************************************************************
+
+
+Besides the estimator itself, error estimation techniques (e.g. Bootstrap, Placebo, JackKnife) attach a confidence level to the impact predictions. The result of an impact estimation in azcausal can look as follows:
+
+
+.. code:: bash
+
+    ╭──────────────────────────────────────────────────────────────────────────────╮
+    |                               CaliforniaProp99                               |
+    ├==============================================================================┤
+    |                                    Panel                                     |
+    |  Time Periods: 31 (19/12)                                  total (pre/post)  |
+    |  Units: 39 (38/1)                                       total (contr/treat)  |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                     ATT                                      |
+    |  Effect (±SE): -15.60 (±7.7087)                                              |
+    |  Confidence Interval (95%): [-30.71 , -0.495030]                        (-)  |
+    |  Observed: 60.35                                                             |
+    |  Counter Factual: 75.95                                                      |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                  Percentage                                  |
+    |  Effect (±SE): -20.54 (±10.15)                                               |
+    |  Confidence Interval (95%): [-40.44 , -0.651752]                        (-)  |
+    |  Observed: 79.46                                                             |
+    |  Counter Factual: 100.00                                                     |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                  Cumulative                                  |
+    |  Effect (±SE): -187.25 (±92.50)                                              |
+    |  Confidence Interval (95%): [-368.55 , -5.9404]                         (-)  |
+    |  Observed: 724.20                                                            |
+    |  Counter Factual: 911.45                                                     |
+    ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+Moreover azcausal supports the visualization of results:
+
+.. image:: https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true
+
+
+
+
+
+
+Contact
+********************************************************************************
+
+Feel free to contact me if you have any questions:
+
+| `Julian Blank <http://julianblank.com>`_  (blankjul [at] amazon.com)
+| Amazon.com
+| Applied Scientist, Amazon
+| 410 Terry Ave N, Seattle 98109, WA.
+
+
+

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home &mdash; azcausal 0.1.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=a58bc63e"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            azcausal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="estimators/estimators.html">Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">azcausal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Home</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/amazon-science/azcausal/blob/main/docs/source/index.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="home">
+<h1>Home<a class="headerlink" href="#home" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>Causal inference is an important component of the experiment evaluation. We highly recommend to have a look at the open-source
+book: <a class="reference external" href="https://matheusfacure.github.io/python-causality-handbook/landing-page.html">Causal Inference for The Brave and True</a>.</p>
+<p>Currently, azcausal provides two well-known and widely used causal inference methods: Difference-in-Difference (DID) and
+Synthetic Difference-in-Difference (SDID). Moreover, error estimates via Placebo, Boostrap, or JackKnife are available.
+Given the result of an estimator printing the summary looks as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>╭──────────────────────────────────────────────────────────────────────────────╮
+<span class="p">|</span><span class="w">                               </span>CaliforniaProp99<span class="w">                               </span><span class="p">|</span>
+├<span class="o">==============================================================================</span>┤
+<span class="p">|</span><span class="w">                                    </span>Panel<span class="w">                                     </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Time<span class="w"> </span>Periods:<span class="w"> </span><span class="m">31</span><span class="w"> </span><span class="o">(</span><span class="m">19</span>/12<span class="o">)</span><span class="w">                                  </span>total<span class="w"> </span><span class="o">(</span>pre/post<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Units:<span class="w"> </span><span class="m">39</span><span class="w"> </span><span class="o">(</span><span class="m">38</span>/1<span class="o">)</span><span class="w">                                       </span>total<span class="w"> </span><span class="o">(</span>contr/treat<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                     </span>ATT<span class="w">                                      </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-15.60<span class="w"> </span><span class="o">(</span>±7.7087<span class="o">)</span><span class="w">                                              </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-30.71<span class="w"> </span>,<span class="w"> </span>-0.495030<span class="o">]</span><span class="w">                        </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">60</span>.35<span class="w">                                                             </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">75</span>.95<span class="w">                                                      </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                  </span>Percentage<span class="w">                                  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-20.54<span class="w"> </span><span class="o">(</span>±10.15<span class="o">)</span><span class="w">                                               </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-40.44<span class="w"> </span>,<span class="w"> </span>-0.651752<span class="o">]</span><span class="w">                        </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">79</span>.46<span class="w">                                                             </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">100</span>.00<span class="w">                                                     </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                  </span>Cumulative<span class="w">                                  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-187.25<span class="w"> </span><span class="o">(</span>±92.50<span class="o">)</span><span class="w">                                              </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-368.55<span class="w"> </span>,<span class="w"> </span>-5.9404<span class="o">]</span><span class="w">                         </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">724</span>.20<span class="w">                                                            </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">911</span>.45<span class="w">                                                     </span><span class="p">|</span>
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+<p>Moreover azcausal supports plotting the impact as well:</p>
+<img alt="https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true" src="https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true" />
+<section id="estimators">
+<h2>Estimators<a class="headerlink" href="#estimators" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Difference-in-Difference (DID):</strong> Simple implementation of the well-known Difference-in-Difference estimator.</p></li>
+<li><p><strong>Synthetic Difference-in-Difference (SDID):</strong> Arkhangelsky, Dmitry Athey, Susan Hirshberg, David A. Imbens, Guido W. Wager, Stefan Synthetic Difference-in-Differences American Economic Review 111 12 4088-4118 2021 10.1257/aer.20190159 <a class="reference external" href="https://www.aeaweb.org/articles?id=10.1257/aer.20190159">https://www.aeaweb.org/articles?id=10.1257/aer.20190159</a>. Implementation based on <a class="reference external" href="https://synth-inference.github.io/synthdid/">https://synth-inference.github.io/synthdid/</a></p></li>
+</ul>
+</section>
+<section id="contact">
+<h2>Contact<a class="headerlink" href="#contact" title="Link to this heading"></a></h2>
+<p>Feel free to contact me if you have any questions:</p>
+<div class="line-block">
+<div class="line"><a class="reference external" href="http://julianblank.com">Julian Blank</a>  (blankjul [at] amazon.com)</div>
+<div class="line">Amazon.com</div>
+<div class="line">Applied Scientist, Amazon</div>
+<div class="line">410 Terry Ave N, Seattle 98109, WA.</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

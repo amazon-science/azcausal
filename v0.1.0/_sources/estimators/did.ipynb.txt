@@ -1,0 +1,457 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "566e7a88",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00787,
+     "end_time": "2023-10-02T23:48:33.627111",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:33.619241",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Difference-in-Difference (DID)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "2b173106-05f9-4bf8-96fc-0e217d5f7d16",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002717,
+     "end_time": "2023-10-02T23:48:33.633359",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:33.630642",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "One of the most well-known estimators is probably Difference-in-Difference (DID). It compares the differences pre- and post-experiment of treatment and control."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0bdaa916-af41-447c-898d-4dcefb87d54b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002287,
+     "end_time": "2023-10-02T23:48:33.638068",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:33.635781",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Panel"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "9491b76f-35b5-4fc5-ab20-fd967e496151",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:33.644032Z",
+     "iopub.status.busy": "2023-10-02T23:48:33.643736Z",
+     "iopub.status.idle": "2023-10-02T23:48:34.977852Z",
+     "shell.execute_reply": "2023-10-02T23:48:34.977357Z"
+    },
+    "papermill": {
+     "duration": 1.338968,
+     "end_time": "2023-10-02T23:48:34.979309",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:33.640341",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                               CaliforniaProp99                               |\n",
+      "├==============================================================================┤\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±3.1446)                                              |\n",
+      "|  Confidence Interval (95%): [-33.51 , -21.19]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect (±SE): -31.19 (±3.5856)                                              |\n",
+      "|  Confidence Interval (95%): [-38.21 , -24.16]                           (-)  |\n",
+      "|  Observed: 68.81                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.data import CaliforniaProp99\n",
+    "from azcausal.core.error import Bootstrap\n",
+    "from azcausal.core.parallelize import Pool, Joblib\n",
+    "from azcausal.estimators.panel.did import DID\n",
+    "\n",
+    "\n",
+    "# load an example data set with the columns Year, State, PacksPerCapita, treated.\n",
+    "panel = CaliforniaProp99().panel()\n",
+    "\n",
+    "# initialize an estimator object, here difference in difference (did)\n",
+    "estimator = DID()\n",
+    "\n",
+    "# run the estimator\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "# plot the results\n",
+    "estimator.plot(result, title=\"CaliforniaProp99\", show=False)\n",
+    "\n",
+    "# create a process pool for parallelization\n",
+    "pool = Joblib(n_jobs=5, progress=False)\n",
+    "\n",
+    "# run the error validation method\n",
+    "estimator.error(result, Bootstrap(n_samples=101), parallelize=pool)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(title=\"CaliforniaProp99\"))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6733825f-72a7-438e-9683-f3555fc8595b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001396,
+     "end_time": "2023-10-02T23:48:34.982613",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:34.981217",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Regression"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "64062ef1-f429-45bf-910a-97a7f7e35fb6",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:34.986431Z",
+     "iopub.status.busy": "2023-10-02T23:48:34.986208Z",
+     "iopub.status.idle": "2023-10-02T23:48:34.996956Z",
+     "shell.execute_reply": "2023-10-02T23:48:34.996606Z"
+    },
+    "papermill": {
+     "duration": 0.01408,
+     "end_time": "2023-10-02T23:48:34.998127",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:34.984047",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>unit</th>\n",
+       "      <th>time</th>\n",
+       "      <th>outcome</th>\n",
+       "      <th>intervention</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Alabama</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Arkansas</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Colorado</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "       unit  time     outcome  intervention\n",
+       "0   Alabama  1970   89.800003             0\n",
+       "1  Arkansas  1970  100.300003             0\n",
+       "2  Colorado  1970  124.800003             0"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# for the regression we can use either the panel or also directly the data frame \n",
+    "df = CaliforniaProp99().load()\n",
+    "\n",
+    "df = df.rename(columns=dict(State='unit', Year='time', PacksPerCapita='outcome', treated='intervention'))\n",
+    "\n",
+    "df.head(3)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "d0524641-478b-4ce3-acc6-4d342cc6f51d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:35.001981Z",
+     "iopub.status.busy": "2023-10-02T23:48:35.001818Z",
+     "iopub.status.idle": "2023-10-02T23:48:35.042221Z",
+     "shell.execute_reply": "2023-10-02T23:48:35.041794Z"
+    },
+    "papermill": {
+     "duration": 0.043915,
+     "end_time": "2023-10-02T23:48:35.043715",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:34.999800",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                               CaliforniaProp99                               |\n",
+      "├==============================================================================┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±4.4095)                                              |\n",
+      "|  Confidence Interval (95%): [-35.99 , -18.71]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect (±SE): -31.19 (±5.0279)                                              |\n",
+      "|  Confidence Interval (95%): [-41.04 , -21.33]                           (-)  |\n",
+      "|  Observed: 68.81                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Cumulative                                  |\n",
+      "|  Effect (±SE): -328.19 (±52.91)                                              |\n",
+      "|  Confidence Interval (95%): [-431.90 , -224.48]                         (-)  |\n",
+      "|  Observed: 724.20                                                            |\n",
+      "|  Counter Factual: 1,052.39                                                   |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.estimators.panel.did import DIDRegressor\n",
+    "\n",
+    "# initialize an estimator object, here difference in difference (did)\n",
+    "estimator = DIDRegressor()\n",
+    "\n",
+    "# fit the estimator\n",
+    "result = estimator.fit(df)\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(title=\"CaliforniaProp99\", conf=95))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d4f8bee6-7fe0-4897-bf5f-0993cbde1722",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001542,
+     "end_time": "2023-10-02T23:48:35.047053",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:35.045511",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Event Study"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dce7a0c9-1544-4103-8bd7-6b20e1f514d7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001505,
+     "end_time": "2023-10-02T23:48:35.050206",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:35.048701",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Exclude the time period -1 and set all DiD in relation to it"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "8cbc74b9-2a84-420d-adcd-cee02eadee19",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:35.054155Z",
+     "iopub.status.busy": "2023-10-02T23:48:35.053942Z",
+     "iopub.status.idle": "2023-10-02T23:48:35.305517Z",
+     "shell.execute_reply": "2023-10-02T23:48:35.304966Z"
+    },
+    "papermill": {
+     "duration": 0.255435,
+     "end_time": "2023-10-02T23:48:35.307120",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:35.051685",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "from azcausal.estimators.panel.did import EventStudy\n",
+    "\n",
+    "# now perform the event study\n",
+    "estimator = EventStudy(n_pre=None, exclude=-1)\n",
+    "\n",
+    "# you can fit this with a data frame or panel\n",
+    "result = estimator.fit(df)\n",
+    "\n",
+    "# show the results in a plot\n",
+    "estimator.plot(result)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f716a7dc-8b88-40f1-b01e-e115d939db15",
+   "metadata": {
+    "papermill": {
+     "duration": 0.001588,
+     "end_time": "2023-10-02T23:48:35.310660",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:35.309072",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Assume that we run DID also before the experiment."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "0b30c0b7-247d-40cd-bb6c-4fb16fa539f9",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:48:35.315154Z",
+     "iopub.status.busy": "2023-10-02T23:48:35.314920Z",
+     "iopub.status.idle": "2023-10-02T23:48:35.461274Z",
+     "shell.execute_reply": "2023-10-02T23:48:35.460804Z"
+    },
+    "papermill": {
+     "duration": 0.150976,
+     "end_time": "2023-10-02T23:48:35.463455",
+     "exception": false,
+     "start_time": "2023-10-02T23:48:35.312479",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "from azcausal.estimators.panel.did import EventStudy\n",
+    "\n",
+    "# now perform the event study\n",
+    "estimator = EventStudy(n_pre=8, exclude=None)\n",
+    "\n",
+    "# you can fit this with a data frame or panel\n",
+    "result = estimator.fit(df)\n",
+    "\n",
+    "# show the results in a plot\n",
+    "estimator.plot(result)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.16"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 6.209865,
+   "end_time": "2023-10-02T23:48:38.086698",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/estimators/did.ipynb",
+   "output_path": "/Users/blankjul/Downloads/sfsadsfsf/azcausal/docs/source/estimators/did.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:48:31.876833",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

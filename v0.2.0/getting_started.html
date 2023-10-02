@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting Started &mdash; azcausal 0.2.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+      <link rel="stylesheet" href="_static/nbsphinx-code-cells.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="canonical" href="latest/getting_started.html" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Estimators" href="estimators/estimators.html" />
+    <link rel="prev" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.2.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#PyPi">PyPi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Github">Github</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#Development">Development</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Version">Version</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Part-I:-The-Panel">Part I: The Panel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Part-II:-The-Treatment-Effect">Part II: The Treatment Effect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Part-III:-Analysis-&amp;-Visualization">Part III: Analysis &amp; Visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="estimators/estimators.html">Estimators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="estimators/did.html">Difference-in-Difference (DID)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Panel">Panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Regression">Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Event-Study">Event Study</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/snn.html">Synthetic Nearest Neighbor (SNN)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="error.html">Error</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Bootstrap">Bootstrap</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Random">Random</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Stratified">Stratified</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Bayes">Bayes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Placebo">Placebo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#JackKnife">JackKnife</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="power.html">Power Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallelization.html">Parallelization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Serial">Serial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Pool">Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Joblib">Joblib</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">azcausal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting Started</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/amazon-science/azcausal/blob/main/docs/source/getting_started.ipynb" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Getting-Started">
+<h1>Getting Started<a class="headerlink" href="#Getting-Started" title="Link to this heading"></a></h1>
+<p>This guide covers the steps to get started with <strong>azcausal</strong>. We have split this introduction into several parts:</p>
+<ul class="simple">
+<li><p>Part I : <strong>The Panel</strong></p></li>
+<li><p>Part II: <strong>The Treatment Effect</strong></p></li>
+<li><p>Part III: <strong>Analysis &amp; Visualization</strong></p></li>
+</ul>
+<section id="Part-I:-The-Panel">
+<h2>Part I: The Panel<a class="headerlink" href="#Part-I:-The-Panel" title="Link to this heading"></a></h2>
+<p>The very first step before doing any causal inference is get loading the data and tranforming them in the right format. Most estimators in this framework require the data to be in form of a <code class="docutils literal notranslate"><span class="pre">Panel</span></code> object.</p>
+<p>Assuming we have the following data frame representing the <code class="docutils literal notranslate"><span class="pre">CaliforniaProp99</span></code> information:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.data</span> <span class="kn">import</span> <span class="n">CaliforniaProp99</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">CaliforniaProp99</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+<span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>State</th>
+      <th>Year</th>
+      <th>PacksPerCapita</th>
+      <th>treated</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Alabama</td>
+      <td>1970</td>
+      <td>89.800003</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Arkansas</td>
+      <td>1970</td>
+      <td>100.300003</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Colorado</td>
+      <td>1970</td>
+      <td>124.800003</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Connecticut</td>
+      <td>1970</td>
+      <td>120.000000</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Delaware</td>
+      <td>1970</td>
+      <td>155.000000</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>1204</th>
+      <td>Virginia</td>
+      <td>2000</td>
+      <td>96.699997</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1205</th>
+      <td>West Virginia</td>
+      <td>2000</td>
+      <td>107.900002</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1206</th>
+      <td>Wisconsin</td>
+      <td>2000</td>
+      <td>80.099998</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1207</th>
+      <td>Wyoming</td>
+      <td>2000</td>
+      <td>90.500000</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1208</th>
+      <td>California</td>
+      <td>2000</td>
+      <td>41.599998</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>1209 rows × 4 columns</p>
+</div></div>
+</div>
+<p>In this example, the columns represent the following:</p>
+<ul class="simple">
+<li><p>The <strong>units</strong>: are given by each state (<code class="docutils literal notranslate"><span class="pre">State</span></code>)</p></li>
+<li><p>The <strong>time</strong>: is represented in years (<code class="docutils literal notranslate"><span class="pre">Year</span></code>)</p></li>
+<li><p>The <strong>outcome</strong> is the number of packs sold (<code class="docutils literal notranslate"><span class="pre">PacksPerCapita</span></code>)</p></li>
+<li><p>The <strong>intervention</strong> is indicated by the binary treatment column (<code class="docutils literal notranslate"><span class="pre">treated</span></code>)</p></li>
+</ul>
+<p>We define a <code class="docutils literal notranslate"><span class="pre">Panel</span></code> as a data frame where the index represents <code class="docutils literal notranslate"><span class="pre">time</span></code> and each column a <code class="docutils literal notranslate"><span class="pre">unit</span></code>. We can extract the <code class="docutils literal notranslate"><span class="pre">outcome</span></code> from the data frame by:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.util</span> <span class="kn">import</span> <span class="n">to_matrix</span>
+
+<span class="n">outcome</span> <span class="o">=</span> <span class="n">to_matrix</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">&quot;Year&quot;</span><span class="p">,</span> <span class="s2">&quot;State&quot;</span><span class="p">,</span> <span class="s2">&quot;PacksPerCapita&quot;</span><span class="p">)</span>
+
+<span class="n">outcome</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>Alabama</th>
+      <th>Arkansas</th>
+      <th>California</th>
+      <th>Colorado</th>
+      <th>Connecticut</th>
+      <th>Delaware</th>
+      <th>Georgia</th>
+      <th>Idaho</th>
+      <th>Illinois</th>
+      <th>Indiana</th>
+      <th>...</th>
+      <th>South Carolina</th>
+      <th>South Dakota</th>
+      <th>Tennessee</th>
+      <th>Texas</th>
+      <th>Utah</th>
+      <th>Vermont</th>
+      <th>Virginia</th>
+      <th>West Virginia</th>
+      <th>Wisconsin</th>
+      <th>Wyoming</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970</th>
+      <td>89.800003</td>
+      <td>100.300003</td>
+      <td>123.0</td>
+      <td>124.800003</td>
+      <td>120.000000</td>
+      <td>155.000000</td>
+      <td>109.900002</td>
+      <td>102.400002</td>
+      <td>124.800003</td>
+      <td>134.600006</td>
+      <td>...</td>
+      <td>103.599998</td>
+      <td>92.699997</td>
+      <td>99.800003</td>
+      <td>106.400002</td>
+      <td>65.500000</td>
+      <td>122.599998</td>
+      <td>124.300003</td>
+      <td>114.5</td>
+      <td>106.400002</td>
+      <td>132.199997</td>
+    </tr>
+    <tr>
+      <th>1971</th>
+      <td>95.400002</td>
+      <td>104.099998</td>
+      <td>121.0</td>
+      <td>125.500000</td>
+      <td>117.599998</td>
+      <td>161.100006</td>
+      <td>115.699997</td>
+      <td>108.500000</td>
+      <td>125.599998</td>
+      <td>139.300003</td>
+      <td>...</td>
+      <td>115.000000</td>
+      <td>96.699997</td>
+      <td>106.300003</td>
+      <td>108.900002</td>
+      <td>67.699997</td>
+      <td>124.400002</td>
+      <td>128.399994</td>
+      <td>111.5</td>
+      <td>105.400002</td>
+      <td>131.699997</td>
+    </tr>
+    <tr>
+      <th>1972</th>
+      <td>101.099998</td>
+      <td>103.900002</td>
+      <td>123.5</td>
+      <td>134.300003</td>
+      <td>110.800003</td>
+      <td>156.300003</td>
+      <td>117.000000</td>
+      <td>126.099998</td>
+      <td>126.599998</td>
+      <td>149.199997</td>
+      <td>...</td>
+      <td>118.699997</td>
+      <td>103.000000</td>
+      <td>111.500000</td>
+      <td>108.599998</td>
+      <td>71.300003</td>
+      <td>138.000000</td>
+      <td>137.000000</td>
+      <td>117.5</td>
+      <td>108.800003</td>
+      <td>140.000000</td>
+    </tr>
+  </tbody>
+</table>
+<p>3 rows × 39 columns</p>
+</div></div>
+</div>
+<p>To check whether the panel data are in fact balanced (we have an entry during each time step for each unit), we can check for <code class="docutils literal notranslate"><span class="pre">NaN</span></code> values in the data frame:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Is Balanced:&quot;</span><span class="p">,</span> <span class="p">(</span><span class="o">~</span><span class="n">outcome</span><span class="o">.</span><span class="n">isna</span><span class="p">())</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Is Balanced: True
+</pre></div></div>
+</div>
+<p>Let us simulated some data would be missing</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">imbalanced</span> <span class="o">=</span> <span class="n">to_matrix</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">80</span><span class="p">),</span> <span class="s2">&quot;Year&quot;</span><span class="p">,</span> <span class="s2">&quot;State&quot;</span><span class="p">,</span> <span class="s2">&quot;PacksPerCapita&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Is Balanced:&quot;</span><span class="p">,</span> <span class="p">(</span><span class="o">~</span><span class="n">imbalanced</span><span class="o">.</span><span class="n">isna</span><span class="p">())</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+
+<span class="n">imbalanced</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Is Balanced: False
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>Alabama</th>
+      <th>Arkansas</th>
+      <th>California</th>
+      <th>Colorado</th>
+      <th>Connecticut</th>
+      <th>Delaware</th>
+      <th>Georgia</th>
+      <th>Idaho</th>
+      <th>Illinois</th>
+      <th>Indiana</th>
+      <th>...</th>
+      <th>South Carolina</th>
+      <th>South Dakota</th>
+      <th>Tennessee</th>
+      <th>Texas</th>
+      <th>Utah</th>
+      <th>Vermont</th>
+      <th>Virginia</th>
+      <th>West Virginia</th>
+      <th>Wisconsin</th>
+      <th>Wyoming</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970</th>
+      <td>89.800003</td>
+      <td>100.300003</td>
+      <td>123.0</td>
+      <td>124.800003</td>
+      <td>120.000000</td>
+      <td>155.000000</td>
+      <td>109.900002</td>
+      <td>102.400002</td>
+      <td>124.800003</td>
+      <td>134.600006</td>
+      <td>...</td>
+      <td>103.599998</td>
+      <td>92.699997</td>
+      <td>99.800003</td>
+      <td>106.400002</td>
+      <td>65.500000</td>
+      <td>122.599998</td>
+      <td>124.300003</td>
+      <td>114.5</td>
+      <td>106.400002</td>
+      <td>132.199997</td>
+    </tr>
+    <tr>
+      <th>1971</th>
+      <td>95.400002</td>
+      <td>104.099998</td>
+      <td>121.0</td>
+      <td>125.500000</td>
+      <td>117.599998</td>
+      <td>161.100006</td>
+      <td>115.699997</td>
+      <td>108.500000</td>
+      <td>125.599998</td>
+      <td>139.300003</td>
+      <td>...</td>
+      <td>115.000000</td>
+      <td>96.699997</td>
+      <td>106.300003</td>
+      <td>108.900002</td>
+      <td>67.699997</td>
+      <td>124.400002</td>
+      <td>128.399994</td>
+      <td>111.5</td>
+      <td>105.400002</td>
+      <td>131.699997</td>
+    </tr>
+    <tr>
+      <th>1972</th>
+      <td>101.099998</td>
+      <td>103.900002</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>...</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+<p>3 rows × 39 columns</p>
+</div></div>
+</div>
+<p>Instead of extacting only one value at a time, we can also extract multiple directly by</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.util</span> <span class="kn">import</span> <span class="n">to_matrices</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">to_matrices</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">&quot;Year&quot;</span><span class="p">,</span> <span class="s2">&quot;State&quot;</span><span class="p">,</span> <span class="s2">&quot;PacksPerCapita&quot;</span><span class="p">,</span> <span class="s2">&quot;treated&quot;</span><span class="p">)</span>
+
+<span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;PacksPerCapita&#39;, &#39;treated&#39;])
+</pre></div></div>
+</div>
+<p>The reason why we have introduced an object called <code class="docutils literal notranslate"><span class="pre">Panel</span></code> is to combine multiple data frames into one and to have convinient access to information about the time pre and post experiment, as well as control and treatment units. A Panel can be created by passing the <em>outcome</em> and <em>intervention</em> directly as <code class="docutils literal notranslate"><span class="pre">pd.DataFrame</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.core.panel</span> <span class="kn">import</span> <span class="n">Panel</span>
+
+<span class="n">outcome</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;PacksPerCapita&#39;</span><span class="p">]</span>
+<span class="n">intervention</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;treated&#39;</span><span class="p">]</span>
+
+<span class="n">panel</span> <span class="o">=</span> <span class="n">Panel</span><span class="p">(</span><span class="n">outcome</span><span class="p">,</span> <span class="n">intervention</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+<p>which is equivalent to</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.core.panel</span> <span class="kn">import</span> <span class="n">Panel</span>
+
+<span class="n">panel</span> <span class="o">=</span> <span class="n">Panel</span><span class="p">(</span><span class="n">outcome</span><span class="o">=</span><span class="s1">&#39;PacksPerCapita&#39;</span><span class="p">,</span> <span class="n">intervention</span><span class="o">=</span><span class="s1">&#39;treated&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+<p>The panel allows accessing <code class="docutils literal notranslate"><span class="pre">outcome</span></code> and <code class="docutils literal notranslate"><span class="pre">intervention</span></code> directly trough properties:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">panel</span><span class="o">.</span><span class="n">outcome</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>Alabama</th>
+      <th>Arkansas</th>
+      <th>California</th>
+      <th>Colorado</th>
+      <th>Connecticut</th>
+      <th>Delaware</th>
+      <th>Georgia</th>
+      <th>Idaho</th>
+      <th>Illinois</th>
+      <th>Indiana</th>
+      <th>...</th>
+      <th>South Carolina</th>
+      <th>South Dakota</th>
+      <th>Tennessee</th>
+      <th>Texas</th>
+      <th>Utah</th>
+      <th>Vermont</th>
+      <th>Virginia</th>
+      <th>West Virginia</th>
+      <th>Wisconsin</th>
+      <th>Wyoming</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970</th>
+      <td>89.800003</td>
+      <td>100.300003</td>
+      <td>123.0</td>
+      <td>124.800003</td>
+      <td>120.000000</td>
+      <td>155.000000</td>
+      <td>109.900002</td>
+      <td>102.400002</td>
+      <td>124.800003</td>
+      <td>134.600006</td>
+      <td>...</td>
+      <td>103.599998</td>
+      <td>92.699997</td>
+      <td>99.800003</td>
+      <td>106.400002</td>
+      <td>65.500000</td>
+      <td>122.599998</td>
+      <td>124.300003</td>
+      <td>114.5</td>
+      <td>106.400002</td>
+      <td>132.199997</td>
+    </tr>
+    <tr>
+      <th>1971</th>
+      <td>95.400002</td>
+      <td>104.099998</td>
+      <td>121.0</td>
+      <td>125.500000</td>
+      <td>117.599998</td>
+      <td>161.100006</td>
+      <td>115.699997</td>
+      <td>108.500000</td>
+      <td>125.599998</td>
+      <td>139.300003</td>
+      <td>...</td>
+      <td>115.000000</td>
+      <td>96.699997</td>
+      <td>106.300003</td>
+      <td>108.900002</td>
+      <td>67.699997</td>
+      <td>124.400002</td>
+      <td>128.399994</td>
+      <td>111.5</td>
+      <td>105.400002</td>
+      <td>131.699997</td>
+    </tr>
+    <tr>
+      <th>1972</th>
+      <td>101.099998</td>
+      <td>103.900002</td>
+      <td>123.5</td>
+      <td>134.300003</td>
+      <td>110.800003</td>
+      <td>156.300003</td>
+      <td>117.000000</td>
+      <td>126.099998</td>
+      <td>126.599998</td>
+      <td>149.199997</td>
+      <td>...</td>
+      <td>118.699997</td>
+      <td>103.000000</td>
+      <td>111.500000</td>
+      <td>108.599998</td>
+      <td>71.300003</td>
+      <td>138.000000</td>
+      <td>137.000000</td>
+      <td>117.5</td>
+      <td>108.800003</td>
+      <td>140.000000</td>
+    </tr>
+  </tbody>
+</table>
+<p>3 rows × 39 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">panel</span><span class="o">.</span><span class="n">intervention</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>Alabama</th>
+      <th>Arkansas</th>
+      <th>California</th>
+      <th>Colorado</th>
+      <th>Connecticut</th>
+      <th>Delaware</th>
+      <th>Georgia</th>
+      <th>Idaho</th>
+      <th>Illinois</th>
+      <th>Indiana</th>
+      <th>...</th>
+      <th>South Carolina</th>
+      <th>South Dakota</th>
+      <th>Tennessee</th>
+      <th>Texas</th>
+      <th>Utah</th>
+      <th>Vermont</th>
+      <th>Virginia</th>
+      <th>West Virginia</th>
+      <th>Wisconsin</th>
+      <th>Wyoming</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1998</th>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1999</th>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2000</th>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+<p>3 rows × 39 columns</p>
+</div></div>
+</div>
+<p>Moreover, the method also allows to use the most common <code class="docutils literal notranslate"><span class="pre">pandas</span></code> functions on all data included in the panel directly at once:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># for instance only keeping the first 3 units.</span>
+<span class="n">new_panel</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">3</span><span class="p">]</span>
+
+<span class="n">new_panel</span><span class="o">.</span><span class="n">outcome</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>Alabama</th>
+      <th>Arkansas</th>
+      <th>California</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970</th>
+      <td>89.800003</td>
+      <td>100.300003</td>
+      <td>123.0</td>
+    </tr>
+    <tr>
+      <th>1971</th>
+      <td>95.400002</td>
+      <td>104.099998</td>
+      <td>121.0</td>
+    </tr>
+    <tr>
+      <th>1972</th>
+      <td>101.099998</td>
+      <td>103.900002</td>
+      <td>123.5</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Also, we can use the <code class="docutils literal notranslate"><span class="pre">get</span></code> method with key word arguments.</p>
+<ul class="simple">
+<li><p>if <code class="docutils literal notranslate"><span class="pre">contr</span> <span class="pre">==</span> <span class="pre">True</span></code> then only control units are returned.</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">treat</span> <span class="pre">==</span> <span class="pre">True</span></code> then units which have been treated at least once are returned.</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">pre</span> <span class="pre">==</span> <span class="pre">True</span></code> then time steps where no unit is treated is returned.</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">post</span> <span class="pre">==</span> <span class="pre">True</span></code> then the time steps where at least one unit is treated.</p></li>
+</ul>
+<p>, for example:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">panel</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outcome&#39;</span><span class="p">,</span> <span class="n">post</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">treat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>State</th>
+      <th>California</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1989</th>
+      <td>82.400002</td>
+    </tr>
+    <tr>
+      <th>1990</th>
+      <td>77.800003</td>
+    </tr>
+    <tr>
+      <th>1991</th>
+      <td>68.699997</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>For more methods please check the <code class="docutils literal notranslate"><span class="pre">Panel</span></code> immplementation directly.</p>
+<p>Using the <code class="docutils literal notranslate"><span class="pre">Panel</span></code> it is also relatively easy to plot the average control versus treatment by:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">rc</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">:(</span><span class="mi">12</span><span class="p">,</span><span class="mi">4</span><span class="p">)})</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">avg_control</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outcome&#39;</span><span class="p">,</span> <span class="n">contr</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">)</span>
+<span class="n">avg_treat</span> <span class="o">=</span> <span class="n">panel</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outcome&#39;</span><span class="p">,</span> <span class="n">treat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">lineplot</span><span class="p">(</span><span class="n">avg_control</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">avg_treat</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.
+  with pd.option_context(&#39;mode.use_inf_as_na&#39;, True):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.
+  with pd.option_context(&#39;mode.use_inf_as_na&#39;, True):
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.lines.Line2D at 0x7f9b91d95c30&gt;
+</pre></div></div>
+</div>
+</section>
+<section id="Part-II:-The-Treatment-Effect">
+<h2>Part II: The Treatment Effect<a class="headerlink" href="#Part-II:-The-Treatment-Effect" title="Link to this heading"></a></h2>
+<p>After bringing the data into the right format, we can use an <code class="docutils literal notranslate"><span class="pre">Estimator</span></code> to make predictions of the treatment effect.</p>
+<p>Like commonly done for time series it is always a good idea to quickly spot check the time series:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">panel</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span>
+
+<span class="n">panel</span><span class="o">.</span><span class="n">outcome</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;Axes: xlabel=&#39;Year&#39;&gt;
+</pre></div></div>
+</div>
+<p>For example, let us use the popular <code class="docutils literal notranslate"><span class="pre">DID</span></code> estimator to estimate the <em>Average Treatment Effect on the Treated (ATT)</em> for the panel data.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.estimators.panel.did</span> <span class="kn">import</span> <span class="n">DID</span>
+
+<span class="c1"># initialize an estimator object</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">DID</span><span class="p">()</span>
+
+<span class="c1"># estimate the treatment effect</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">panel</span><span class="p">)</span>
+
+<span class="c1"># print the treatment effect summary</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cumulative</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                     ATT                                      |
+|  Effect: -27.35                                                              |
+|  Observed: 60.35                                                             |
+|  Counter Factual: 87.70                                                      |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Percentage                                  |
+|  Effect: -31.19                                                              |
+|  Observed: 68.81                                                             |
+|  Counter Factual: 100.00                                                     |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+<p>Now, the treatment effect without any confidence intervals is often not that helpful. Some estimators come with error estimates out of the box and will directly provide them (e.g. <code class="docutils literal notranslate"><span class="pre">DIDRegression</span></code>). For others, we can use an <code class="docutils literal notranslate"><span class="pre">Error</span></code> estimator to attach an error and calculate confidence intervals along with it.</p>
+<p>The following error estimators are available:</p>
+<ul class="simple">
+<li><p><strong>Bootstrap</strong>: Randomly sample units (with replacement) from the panel data and estimate the effect.</p></li>
+<li><p><strong>Placebo</strong>: Only sample from control units as use them as placebo.</p></li>
+<li><p><strong>JackKnife</strong>: Leave one out crossvalidation but removing one unit at a time.</p></li>
+</ul>
+<p>Each error estimate requires a treatment estimated on a new panel derived from the original data set by the corresponding method.</p>
+<p>Each estimator has a method called <code class="docutils literal notranslate"><span class="pre">estimator.error(result,</span> <span class="pre">method)</span></code> which takes the original <code class="docutils literal notranslate"><span class="pre">Result</span></code> object returned before and the <code class="docutils literal notranslate"><span class="pre">Error</span></code> estimation method that should be used.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.core.error</span> <span class="kn">import</span> <span class="n">Bootstrap</span>
+
+<span class="n">se</span><span class="p">,</span> <span class="n">runs</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Bootstrap</span><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">500</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">conf</span><span class="o">=</span><span class="mi">90</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                     ATT                                      |
+|  Effect (±SE): -27.35 (±2.6887)                                              |
+|  Confidence Interval (90%): [-31.77 , -22.93]                           (-)  |
+|  Observed: 60.35                                                             |
+|  Counter Factual: 87.70                                                      |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Percentage                                  |
+|  Effect (±SE): -31.19 (±3.0659)                                              |
+|  Confidence Interval (90%): [-36.23 , -26.14]                           (-)  |
+|  Observed: 68.81                                                             |
+|  Counter Factual: 100.00                                                     |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+<p>Similarly, we can use <code class="docutils literal notranslate"><span class="pre">SDID</span></code> as an estimator</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.estimators.panel.sdid</span> <span class="kn">import</span> <span class="n">SDID</span>
+<span class="kn">from</span> <span class="nn">azcausal.core.error</span> <span class="kn">import</span> <span class="n">JackKnife</span>
+
+<span class="c1"># initialize an estimator object</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">SDID</span><span class="p">()</span>
+
+<span class="c1"># estimate the treatment effect</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">panel</span><span class="p">)</span>
+
+<span class="c1"># here we use JackKnife which is optmized to be run with SDID</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">JackKnife</span><span class="p">())</span>
+
+<span class="c1"># print the treatment effect summary</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">percentage</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cumulative</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                     ATT                                      |
+|  Effect (±SE): -15.60 (±2.9161)                                              |
+|  Confidence Interval (95%): [-21.32 , -9.8884]                          (-)  |
+|  Observed: 60.35                                                             |
+|  Counter Factual: 75.95                                                      |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Percentage                                  |
+|  Effect (±SE): -20.54 (±3.8393)                                              |
+|  Confidence Interval (95%): [-28.07 , -13.02]                           (-)  |
+|  Observed: 79.46                                                             |
+|  Counter Factual: 100.00                                                     |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Cumulative                                  |
+|  Effect (±SE): -187.25 (±34.99)                                              |
+|  Confidence Interval (95%): [-255.83 , -118.66]                         (-)  |
+|  Observed: 724.20                                                            |
+|  Counter Factual: 911.45                                                     |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+</section>
+<section id="Part-III:-Analysis-&amp;-Visualization">
+<h2>Part III: Analysis &amp; Visualization<a class="headerlink" href="#Part-III:-Analysis-&-Visualization" title="Link to this heading"></a></h2>
+<p>Lastly, we want to give some idea on how to visualize results.</p>
+<p>To learn more about how the error estimation was originally derived, we can check the corresponding distribution by plotting the estimates of each of the runs:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">vv</span> <span class="o">=</span> <span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">effect</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">runs</span><span class="p">]</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">histplot</span><span class="p">(</span><span class="n">vv</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead
+  if pd.api.types.is_categorical_dtype(vector):
+/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.
+  with pd.option_context(&#39;mode.use_inf_as_na&#39;, True):
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;Axes: xlabel=&#39;Year&#39;, ylabel=&#39;Count&#39;&gt;
+</pre></div></div>
+</div>
+<p>Each post-analysis will be different depending on the estimator. We would like a give an example of <code class="docutils literal notranslate"><span class="pre">SDID</span></code> here. The available additional information stored by the estimator are:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">effect</span>
+
+<span class="n">effect</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+dict_keys([&#39;lambd&#39;, &#39;omega&#39;, &#39;solvers&#39;, &#39;did&#39;, &#39;error&#39;])
+</pre></div></div>
+</div>
+<p>The DID results give us additional information about how the ATT is actually calculated:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;did&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;att&#39;: -15.603827872733824,
+ &#39;delta_contr&#39;: -19.192040932672683,
+ &#39;delta_treat&#39;: -34.795868805406506,
+ &#39;pre_contr&#39;: 120.49828909527167,
+ &#39;post_contr&#39;: 101.30624816259899,
+ &#39;pre_treat&#39;: 95.14586886957318,
+ &#39;post_treat&#39;: 60.35000006416667}
+</pre></div></div>
+</div>
+<p>The unit weights (<code class="docutils literal notranslate"><span class="pre">omega</span></code>) with at least 1% contribution</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;omega&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">0.01</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+State
+Nevada            0.124489
+New Hampshire     0.105048
+Connecticut       0.078287
+Delaware          0.070368
+Colorado          0.057513
+Illinois          0.053388
+Nebraska          0.047853
+Montana           0.045135
+Utah              0.041518
+New Mexico        0.040568
+Minnesota         0.039495
+Wisconsin         0.036667
+West Virginia     0.033569
+North Carolina    0.032805
+Idaho             0.031468
+Ohio              0.031461
+Maine             0.028211
+Iowa              0.025939
+Kansas            0.021605
+Pennsylvania      0.015352
+Indiana           0.010135
+Name: omega, dtype: float64
+</pre></div></div>
+</div>
+<p>Similarly, the time weights</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="p">[</span><span class="s1">&#39;lambd&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">0.01</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1988    0.427076
+1986    0.366471
+1987    0.206453
+Name: lambd, dtype: float64
+</pre></div></div>
+</div>
+<p>Or in general the treatment effect over time:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Control (C), Treatment (T), Time Weights (lambd), Intervention (W), Average Treatment Effect on the Treated (att), Counter Factual (CF)</span>
+<span class="n">effect</span><span class="o">.</span><span class="n">by_time</span><span class="o">.</span><span class="n">tail</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>C</th>
+      <th>T</th>
+      <th>lambd</th>
+      <th>W</th>
+      <th>att</th>
+      <th>CF</th>
+    </tr>
+    <tr>
+      <th>Year</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1996</th>
+      <td>99.202557</td>
+      <td>54.500000</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-19.350137</td>
+      <td>73.850137</td>
+    </tr>
+    <tr>
+      <th>1997</th>
+      <td>100.035935</td>
+      <td>53.799999</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-20.883516</td>
+      <td>74.683515</td>
+    </tr>
+    <tr>
+      <th>1998</th>
+      <td>100.433993</td>
+      <td>52.299999</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-22.781573</td>
+      <td>75.081573</td>
+    </tr>
+    <tr>
+      <th>1999</th>
+      <td>98.497346</td>
+      <td>47.200001</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-25.944925</td>
+      <td>73.144926</td>
+    </tr>
+    <tr>
+      <th>2000</th>
+      <td>91.437300</td>
+      <td>41.599998</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>-24.484882</td>
+      <td>66.084880</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">effect</span><span class="o">.</span><span class="n">by_time</span><span class="p">[[</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;CF&#39;</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;Axes: xlabel=&#39;Year&#39;&gt;
+</pre></div></div>
+</div>
+<p>Some estimators will have directly a plotting method for the result:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">estimator</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">CF</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="kc">None</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="estimators/estimators.html" class="btn btn-neutral float-right" title="Estimators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

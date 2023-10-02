@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home &mdash; azcausal 0.2.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/logo.ico"/>
+    <link rel="canonical" href="latest/index.html" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+        <script src="_static/copybutton.js?v=f281be69"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#">
+            
+              <img src="_static/logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                0.2.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#PyPi">PyPi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Github">Github</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#Development">Development</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#Version">Version</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#Part-I:-The-Panel">Part I: The Panel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#Part-II:-The-Treatment-Effect">Part II: The Treatment Effect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting_started.html#Part-III:-Analysis-&amp;-Visualization">Part III: Analysis &amp; Visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="estimators/estimators.html">Estimators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="estimators/did.html">Difference-in-Difference (DID)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Panel">Panel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Regression">Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/did.html#Event-Study">Event Study</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="estimators/snn.html">Synthetic Nearest Neighbor (SNN)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="error.html">Error</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Bootstrap">Bootstrap</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Random">Random</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Stratified">Stratified</a></li>
+<li class="toctree-l3"><a class="reference internal" href="error.html#Bayes">Bayes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#Placebo">Placebo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="error.html#JackKnife">JackKnife</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="power.html">Power Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallelization.html">Parallelization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Serial">Serial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Pool">Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parallelization.html#Joblib">Joblib</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">azcausal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Home</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/amazon-science/azcausal/blob/main/docs/source/index.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="home">
+<h1>Home<a class="headerlink" href="#home" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>A/B testing is widely used to determine the impact of new ideas and to decide on whether something is put in production in the long-term. Causal inference focuses on drawing conclusions based on observational data. Especially analyzing panel data (a data set with a unit and time dimension) can be challenging. For a general introduction into causal inference, we highly recommend having a look at the open-source book: <a class="reference external" href="https://matheusfacure.github.io/python-causality-handbook/landing-page.html">Causal Inference for The Brave and True</a>.</p>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>For the latest stable release please use the official Python package manager:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>azcausal
+</pre></div>
+</div>
+</section>
+<section id="estimators">
+<h2>Estimators<a class="headerlink" href="#estimators" title="Link to this heading"></a></h2>
+<p>azcausal is a toolkit for causal inference in general and provides implementations of well-known and widely used causal inference methods (e.g. DID, SDID).</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 67%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Estimator</p></th>
+<th class="head"><p>Reference</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="estimators/did.html#did"><span class="std std-ref">Difference in Difference (DID)</span></a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="estimators/sdid.html#sdid"><span class="std std-ref">Synthetic Difference in Difference (SDID)</span></a></p></td>
+<td><p><span id="id1">[<a class="reference internal" href="references.html#id2" title="Dmitry Arkhangelsky, Susan Athey, David A. Hirshberg, Guido W. Imbens, and Stefan Wager. Synthetic difference-in-differences. American Economic Review, 111(12):4088-4118, December 2021. URL: https://www.aeaweb.org/articles?id=10.1257/aer.20190159, doi:10.1257/aer.20190159.">AAH+21</a>]</span></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="estimators/snn.html#snn"><span class="std std-ref">Synthetic Nearest Neighbor (SNN)</span></a></p></td>
+<td><p><span id="id2">[<a class="reference internal" href="references.html#id3" title="Anish Agarwal, Munther Dahleh, Devavrat Shah, and Dennis Shen. Causal matrix completion. 2021. arXiv:2109.15154.">ADSS21</a>]</span></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<p>Besides the estimator itself, error estimation techniques (e.g. Bootstrap, Placebo, JackKnife) attach a confidence level to the impact predictions. The result of an impact estimation in azcausal can look as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>╭──────────────────────────────────────────────────────────────────────────────╮
+<span class="p">|</span><span class="w">                               </span>CaliforniaProp99<span class="w">                               </span><span class="p">|</span>
+├<span class="o">==============================================================================</span>┤
+<span class="p">|</span><span class="w">                                    </span>Panel<span class="w">                                     </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Time<span class="w"> </span>Periods:<span class="w"> </span><span class="m">31</span><span class="w"> </span><span class="o">(</span><span class="m">19</span>/12<span class="o">)</span><span class="w">                                  </span>total<span class="w"> </span><span class="o">(</span>pre/post<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Units:<span class="w"> </span><span class="m">39</span><span class="w"> </span><span class="o">(</span><span class="m">38</span>/1<span class="o">)</span><span class="w">                                       </span>total<span class="w"> </span><span class="o">(</span>contr/treat<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                     </span>ATT<span class="w">                                      </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-15.60<span class="w"> </span><span class="o">(</span>±7.7087<span class="o">)</span><span class="w">                                              </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-30.71<span class="w"> </span>,<span class="w"> </span>-0.495030<span class="o">]</span><span class="w">                        </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">60</span>.35<span class="w">                                                             </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">75</span>.95<span class="w">                                                      </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                  </span>Percentage<span class="w">                                  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-20.54<span class="w"> </span><span class="o">(</span>±10.15<span class="o">)</span><span class="w">                                               </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-40.44<span class="w"> </span>,<span class="w"> </span>-0.651752<span class="o">]</span><span class="w">                        </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">79</span>.46<span class="w">                                                             </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">100</span>.00<span class="w">                                                     </span><span class="p">|</span>
+├──────────────────────────────────────────────────────────────────────────────┤
+<span class="p">|</span><span class="w">                                  </span>Cumulative<span class="w">                                  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Effect<span class="w"> </span><span class="o">(</span>±SE<span class="o">)</span>:<span class="w"> </span>-187.25<span class="w"> </span><span class="o">(</span>±92.50<span class="o">)</span><span class="w">                                              </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Confidence<span class="w"> </span>Interval<span class="w"> </span><span class="o">(</span><span class="m">95</span>%<span class="o">)</span>:<span class="w"> </span><span class="o">[</span>-368.55<span class="w"> </span>,<span class="w"> </span>-5.9404<span class="o">]</span><span class="w">                         </span><span class="o">(</span>-<span class="o">)</span><span class="w">  </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Observed:<span class="w"> </span><span class="m">724</span>.20<span class="w">                                                            </span><span class="p">|</span>
+<span class="p">|</span><span class="w">  </span>Counter<span class="w"> </span>Factual:<span class="w"> </span><span class="m">911</span>.45<span class="w">                                                     </span><span class="p">|</span>
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div>
+</div>
+<p>Moreover azcausal supports the visualization of results:</p>
+<img alt="https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true" src="https://github.com/amazon-science/azcausal/blob/d176af3d41144f5c5fa4d8ef31f5484c4953c6b7/docs/source/images/sdid.png?raw=true" />
+</section>
+<section id="contact">
+<h2>Contact<a class="headerlink" href="#contact" title="Link to this heading"></a></h2>
+<p>Feel free to contact me if you have any questions:</p>
+<div class="line-block">
+<div class="line"><a class="reference external" href="http://julianblank.com">Julian Blank</a>  (blankjul [at] amazon.com)</div>
+<div class="line">Amazon.com</div>
+<div class="line">Applied Scientist, Amazon</div>
+<div class="line">410 Terry Ave N, Seattle 98109, WA.</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

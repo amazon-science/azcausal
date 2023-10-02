@@ -1,0 +1,2673 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "c5579eee",
+   "metadata": {
+    "papermill": {
+     "duration": 0.015048,
+     "end_time": "2023-10-02T23:28:54.383798",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.368750",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Getting Started"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "da38288e-7beb-4a9f-9fbf-7b07e77a1ffb",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006823,
+     "end_time": "2023-10-02T23:28:54.399102",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.392279",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "This guide covers the steps to get started with **azcausal**. \n",
+    "We have split this introduction into several parts:"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "57764f30-7fa8-4686-ba9c-3dc86f017849",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005894,
+     "end_time": "2023-10-02T23:28:54.411101",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.405207",
+     "status": "completed"
+    },
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    "- Part I : **The Panel**\n",
+    "- Part II: **The Treatment Effect**\n",
+    "- Part III: **Analysis & Visualization**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b06e1e39-814c-4fc4-825b-a30bf1afa3a8",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005186,
+     "end_time": "2023-10-02T23:28:54.421763",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.416577",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Part I: The Panel"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3b49040e-0a2b-4113-8897-ef9103794bf2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.004728,
+     "end_time": "2023-10-02T23:28:54.431486",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.426758",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The very first step before doing any causal inference is get loading the data and tranforming them in the right format. Most estimators in this framework require the data to be in form of a `Panel` object. \n",
+    "\n",
+    "Assuming we have the following data frame representing the `CaliforniaProp99` information:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "11b31c83-3403-4223-a9dc-4ebf5fb25b3d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.441629Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.441423Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.838867Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.838472Z"
+    },
+    "papermill": {
+     "duration": 0.404818,
+     "end_time": "2023-10-02T23:28:54.840874",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.436056",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>State</th>\n",
+       "      <th>Year</th>\n",
+       "      <th>PacksPerCapita</th>\n",
+       "      <th>treated</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>Alabama</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Arkansas</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Colorado</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Connecticut</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>120.000000</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>Delaware</td>\n",
+       "      <td>1970</td>\n",
+       "      <td>155.000000</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>...</th>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1204</th>\n",
+       "      <td>Virginia</td>\n",
+       "      <td>2000</td>\n",
+       "      <td>96.699997</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1205</th>\n",
+       "      <td>West Virginia</td>\n",
+       "      <td>2000</td>\n",
+       "      <td>107.900002</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1206</th>\n",
+       "      <td>Wisconsin</td>\n",
+       "      <td>2000</td>\n",
+       "      <td>80.099998</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1207</th>\n",
+       "      <td>Wyoming</td>\n",
+       "      <td>2000</td>\n",
+       "      <td>90.500000</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1208</th>\n",
+       "      <td>California</td>\n",
+       "      <td>2000</td>\n",
+       "      <td>41.599998</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>1209 rows × 4 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "              State  Year  PacksPerCapita  treated\n",
+       "0           Alabama  1970       89.800003        0\n",
+       "1          Arkansas  1970      100.300003        0\n",
+       "2          Colorado  1970      124.800003        0\n",
+       "3       Connecticut  1970      120.000000        0\n",
+       "4          Delaware  1970      155.000000        0\n",
+       "...             ...   ...             ...      ...\n",
+       "1204       Virginia  2000       96.699997        0\n",
+       "1205  West Virginia  2000      107.900002        0\n",
+       "1206      Wisconsin  2000       80.099998        0\n",
+       "1207        Wyoming  2000       90.500000        0\n",
+       "1208     California  2000       41.599998        1\n",
+       "\n",
+       "[1209 rows x 4 columns]"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.data import CaliforniaProp99\n",
+    "\n",
+    "df = CaliforniaProp99().load()\n",
+    "\n",
+    "df"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d08ef0b7-e0f2-443b-b207-9720ecca5cd5",
+   "metadata": {
+    "papermill": {
+     "duration": 0.004669,
+     "end_time": "2023-10-02T23:28:54.850785",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.846116",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "In this example, the columns represent the following:\n",
+    "\n",
+    "+ The **units**: are given by each state (`State`)\n",
+    "+ The **time**: is represented in years (`Year`)\n",
+    "+ The **outcome** is the number of packs sold (`PacksPerCapita`)\n",
+    "+ The **intervention** is indicated by the binary treatment column (`treated`)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "92fa9eff-5019-42e3-8d1d-0d43d90446dd",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00431,
+     "end_time": "2023-10-02T23:28:54.859535",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.855225",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "We define a `Panel` as a data frame where the index represents `time` and each column a `unit`. We can extract the `outcome` from the data frame by:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "80f46a22-55ce-4f78-af2b-2ba10f851dbc",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.869225Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.869014Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.885170Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.884829Z"
+    },
+    "papermill": {
+     "duration": 0.0224,
+     "end_time": "2023-10-02T23:28:54.886318",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.863918",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>Alabama</th>\n",
+       "      <th>Arkansas</th>\n",
+       "      <th>California</th>\n",
+       "      <th>Colorado</th>\n",
+       "      <th>Connecticut</th>\n",
+       "      <th>Delaware</th>\n",
+       "      <th>Georgia</th>\n",
+       "      <th>Idaho</th>\n",
+       "      <th>Illinois</th>\n",
+       "      <th>Indiana</th>\n",
+       "      <th>...</th>\n",
+       "      <th>South Carolina</th>\n",
+       "      <th>South Dakota</th>\n",
+       "      <th>Tennessee</th>\n",
+       "      <th>Texas</th>\n",
+       "      <th>Utah</th>\n",
+       "      <th>Vermont</th>\n",
+       "      <th>Virginia</th>\n",
+       "      <th>West Virginia</th>\n",
+       "      <th>Wisconsin</th>\n",
+       "      <th>Wyoming</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1970</th>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>123.0</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>120.000000</td>\n",
+       "      <td>155.000000</td>\n",
+       "      <td>109.900002</td>\n",
+       "      <td>102.400002</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>134.600006</td>\n",
+       "      <td>...</td>\n",
+       "      <td>103.599998</td>\n",
+       "      <td>92.699997</td>\n",
+       "      <td>99.800003</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>65.500000</td>\n",
+       "      <td>122.599998</td>\n",
+       "      <td>124.300003</td>\n",
+       "      <td>114.5</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>132.199997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1971</th>\n",
+       "      <td>95.400002</td>\n",
+       "      <td>104.099998</td>\n",
+       "      <td>121.0</td>\n",
+       "      <td>125.500000</td>\n",
+       "      <td>117.599998</td>\n",
+       "      <td>161.100006</td>\n",
+       "      <td>115.699997</td>\n",
+       "      <td>108.500000</td>\n",
+       "      <td>125.599998</td>\n",
+       "      <td>139.300003</td>\n",
+       "      <td>...</td>\n",
+       "      <td>115.000000</td>\n",
+       "      <td>96.699997</td>\n",
+       "      <td>106.300003</td>\n",
+       "      <td>108.900002</td>\n",
+       "      <td>67.699997</td>\n",
+       "      <td>124.400002</td>\n",
+       "      <td>128.399994</td>\n",
+       "      <td>111.5</td>\n",
+       "      <td>105.400002</td>\n",
+       "      <td>131.699997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1972</th>\n",
+       "      <td>101.099998</td>\n",
+       "      <td>103.900002</td>\n",
+       "      <td>123.5</td>\n",
+       "      <td>134.300003</td>\n",
+       "      <td>110.800003</td>\n",
+       "      <td>156.300003</td>\n",
+       "      <td>117.000000</td>\n",
+       "      <td>126.099998</td>\n",
+       "      <td>126.599998</td>\n",
+       "      <td>149.199997</td>\n",
+       "      <td>...</td>\n",
+       "      <td>118.699997</td>\n",
+       "      <td>103.000000</td>\n",
+       "      <td>111.500000</td>\n",
+       "      <td>108.599998</td>\n",
+       "      <td>71.300003</td>\n",
+       "      <td>138.000000</td>\n",
+       "      <td>137.000000</td>\n",
+       "      <td>117.5</td>\n",
+       "      <td>108.800003</td>\n",
+       "      <td>140.000000</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>3 rows × 39 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State     Alabama    Arkansas  California    Colorado  Connecticut  \\\n",
+       "Year                                                                 \n",
+       "1970    89.800003  100.300003       123.0  124.800003   120.000000   \n",
+       "1971    95.400002  104.099998       121.0  125.500000   117.599998   \n",
+       "1972   101.099998  103.900002       123.5  134.300003   110.800003   \n",
+       "\n",
+       "State    Delaware     Georgia       Idaho    Illinois     Indiana  ...  \\\n",
+       "Year                                                               ...   \n",
+       "1970   155.000000  109.900002  102.400002  124.800003  134.600006  ...   \n",
+       "1971   161.100006  115.699997  108.500000  125.599998  139.300003  ...   \n",
+       "1972   156.300003  117.000000  126.099998  126.599998  149.199997  ...   \n",
+       "\n",
+       "State  South Carolina  South Dakota   Tennessee       Texas       Utah  \\\n",
+       "Year                                                                     \n",
+       "1970       103.599998     92.699997   99.800003  106.400002  65.500000   \n",
+       "1971       115.000000     96.699997  106.300003  108.900002  67.699997   \n",
+       "1972       118.699997    103.000000  111.500000  108.599998  71.300003   \n",
+       "\n",
+       "State     Vermont    Virginia  West Virginia   Wisconsin     Wyoming  \n",
+       "Year                                                                  \n",
+       "1970   122.599998  124.300003          114.5  106.400002  132.199997  \n",
+       "1971   124.400002  128.399994          111.5  105.400002  131.699997  \n",
+       "1972   138.000000  137.000000          117.5  108.800003  140.000000  \n",
+       "\n",
+       "[3 rows x 39 columns]"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.util import to_matrix\n",
+    "\n",
+    "outcome = to_matrix(df, \"Year\", \"State\", \"PacksPerCapita\")\n",
+    "\n",
+    "outcome.head(3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5095bb12-819b-418c-bc35-976f17e4e655",
+   "metadata": {
+    "papermill": {
+     "duration": 0.004488,
+     "end_time": "2023-10-02T23:28:54.895529",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.891041",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "To check whether the panel data are in fact balanced (we have an entry during each time step for each unit), we can check for `NaN` values in the data frame:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "5fb62ec0-134a-4cd0-83d2-c307dd9b303b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.905887Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.905709Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.908668Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.908331Z"
+    },
+    "papermill": {
+     "duration": 0.009627,
+     "end_time": "2023-10-02T23:28:54.909851",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.900224",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Is Balanced: True\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"Is Balanced:\", (~outcome.isna()).all(axis=None))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6a18b2a9-0167-44ff-b38d-56a44964c219",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00474,
+     "end_time": "2023-10-02T23:28:54.919344",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.914604",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Let us simulated some data would be missing"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "4b5c4bfb-9db2-442e-bf4e-047e06330238",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.929741Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.929560Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.942909Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.942533Z"
+    },
+    "papermill": {
+     "duration": 0.019893,
+     "end_time": "2023-10-02T23:28:54.944069",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.924176",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Is Balanced: False\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>Alabama</th>\n",
+       "      <th>Arkansas</th>\n",
+       "      <th>California</th>\n",
+       "      <th>Colorado</th>\n",
+       "      <th>Connecticut</th>\n",
+       "      <th>Delaware</th>\n",
+       "      <th>Georgia</th>\n",
+       "      <th>Idaho</th>\n",
+       "      <th>Illinois</th>\n",
+       "      <th>Indiana</th>\n",
+       "      <th>...</th>\n",
+       "      <th>South Carolina</th>\n",
+       "      <th>South Dakota</th>\n",
+       "      <th>Tennessee</th>\n",
+       "      <th>Texas</th>\n",
+       "      <th>Utah</th>\n",
+       "      <th>Vermont</th>\n",
+       "      <th>Virginia</th>\n",
+       "      <th>West Virginia</th>\n",
+       "      <th>Wisconsin</th>\n",
+       "      <th>Wyoming</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1970</th>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>123.0</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>120.000000</td>\n",
+       "      <td>155.000000</td>\n",
+       "      <td>109.900002</td>\n",
+       "      <td>102.400002</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>134.600006</td>\n",
+       "      <td>...</td>\n",
+       "      <td>103.599998</td>\n",
+       "      <td>92.699997</td>\n",
+       "      <td>99.800003</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>65.500000</td>\n",
+       "      <td>122.599998</td>\n",
+       "      <td>124.300003</td>\n",
+       "      <td>114.5</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>132.199997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1971</th>\n",
+       "      <td>95.400002</td>\n",
+       "      <td>104.099998</td>\n",
+       "      <td>121.0</td>\n",
+       "      <td>125.500000</td>\n",
+       "      <td>117.599998</td>\n",
+       "      <td>161.100006</td>\n",
+       "      <td>115.699997</td>\n",
+       "      <td>108.500000</td>\n",
+       "      <td>125.599998</td>\n",
+       "      <td>139.300003</td>\n",
+       "      <td>...</td>\n",
+       "      <td>115.000000</td>\n",
+       "      <td>96.699997</td>\n",
+       "      <td>106.300003</td>\n",
+       "      <td>108.900002</td>\n",
+       "      <td>67.699997</td>\n",
+       "      <td>124.400002</td>\n",
+       "      <td>128.399994</td>\n",
+       "      <td>111.5</td>\n",
+       "      <td>105.400002</td>\n",
+       "      <td>131.699997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1972</th>\n",
+       "      <td>101.099998</td>\n",
+       "      <td>103.900002</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>...</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>NaN</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>3 rows × 39 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State     Alabama    Arkansas  California    Colorado  Connecticut  \\\n",
+       "Year                                                                 \n",
+       "1970    89.800003  100.300003       123.0  124.800003   120.000000   \n",
+       "1971    95.400002  104.099998       121.0  125.500000   117.599998   \n",
+       "1972   101.099998  103.900002         NaN         NaN          NaN   \n",
+       "\n",
+       "State    Delaware     Georgia       Idaho    Illinois     Indiana  ...  \\\n",
+       "Year                                                               ...   \n",
+       "1970   155.000000  109.900002  102.400002  124.800003  134.600006  ...   \n",
+       "1971   161.100006  115.699997  108.500000  125.599998  139.300003  ...   \n",
+       "1972          NaN         NaN         NaN         NaN         NaN  ...   \n",
+       "\n",
+       "State  South Carolina  South Dakota   Tennessee       Texas       Utah  \\\n",
+       "Year                                                                     \n",
+       "1970       103.599998     92.699997   99.800003  106.400002  65.500000   \n",
+       "1971       115.000000     96.699997  106.300003  108.900002  67.699997   \n",
+       "1972              NaN           NaN         NaN         NaN        NaN   \n",
+       "\n",
+       "State     Vermont    Virginia  West Virginia   Wisconsin     Wyoming  \n",
+       "Year                                                                  \n",
+       "1970   122.599998  124.300003          114.5  106.400002  132.199997  \n",
+       "1971   124.400002  128.399994          111.5  105.400002  131.699997  \n",
+       "1972          NaN         NaN            NaN         NaN         NaN  \n",
+       "\n",
+       "[3 rows x 39 columns]"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "imbalanced = to_matrix(df.head(80), \"Year\", \"State\", \"PacksPerCapita\")\n",
+    "print(\"Is Balanced:\", (~imbalanced.isna()).all(axis=None))\n",
+    "\n",
+    "imbalanced.head(3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f83b7973-e05c-4a79-8d98-2c1cf1f48b5d",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00488,
+     "end_time": "2023-10-02T23:28:54.954073",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.949193",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Instead of extacting only one value at a time, we can also extract multiple directly by "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "5050c0b5-3c4f-4bb8-865f-af45e98c08d8",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.964923Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.964752Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.971634Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.971283Z"
+    },
+    "papermill": {
+     "duration": 0.013675,
+     "end_time": "2023-10-02T23:28:54.972771",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.959096",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "dict_keys(['PacksPerCapita', 'treated'])"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from azcausal.util import to_matrices\n",
+    "\n",
+    "data = to_matrices(df, \"Year\", \"State\", \"PacksPerCapita\", \"treated\")\n",
+    "\n",
+    "data.keys()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4c26f061-7b8d-416d-9696-9e135753ed75",
+   "metadata": {
+    "papermill": {
+     "duration": 0.004975,
+     "end_time": "2023-10-02T23:28:54.982952",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.977977",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The reason why we have introduced an object called `Panel` is to combine multiple data frames into one and to have convinient access to information about the time pre and post experiment, as well as control and treatment units. A Panel can be created by passing the *outcome* and *intervention* directly as `pd.DataFrame`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "d5c481e7-4fb8-439b-91ca-883aa325b61a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:54.993859Z",
+     "iopub.status.busy": "2023-10-02T23:28:54.993679Z",
+     "iopub.status.idle": "2023-10-02T23:28:54.997022Z",
+     "shell.execute_reply": "2023-10-02T23:28:54.996638Z"
+    },
+    "papermill": {
+     "duration": 0.010352,
+     "end_time": "2023-10-02T23:28:54.998223",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:54.987871",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.panel import Panel\n",
+    "\n",
+    "outcome = data['PacksPerCapita']\n",
+    "intervention = data['treated']\n",
+    "\n",
+    "panel = Panel(outcome, intervention)\n",
+    "\n",
+    "print(panel.summary())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "49c46e6d-e089-4abf-b578-57ce8d4436b6",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005436,
+     "end_time": "2023-10-02T23:28:55.009228",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.003792",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "which is equivalent to"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "4e59264e-504f-4028-8b70-ab57dd1008e7",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.020363Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.020166Z",
+     "iopub.status.idle": "2023-10-02T23:28:55.023149Z",
+     "shell.execute_reply": "2023-10-02T23:28:55.022809Z"
+    },
+    "papermill": {
+     "duration": 0.009956,
+     "end_time": "2023-10-02T23:28:55.024344",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.014388",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.panel import Panel\n",
+    "\n",
+    "panel = Panel(outcome='PacksPerCapita', intervention='treated', data=data)\n",
+    "\n",
+    "print(panel.summary())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1259c0f7-8006-4325-98d3-8dc273cf66fa",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005075,
+     "end_time": "2023-10-02T23:28:55.034596",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.029521",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The panel allows accessing `outcome` and `intervention` directly trough properties:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "ed87e5c6-db29-4f20-9cdc-f772a7448247",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.045710Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.045541Z",
+     "iopub.status.idle": "2023-10-02T23:28:55.055314Z",
+     "shell.execute_reply": "2023-10-02T23:28:55.054960Z"
+    },
+    "papermill": {
+     "duration": 0.016806,
+     "end_time": "2023-10-02T23:28:55.056557",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.039751",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>Alabama</th>\n",
+       "      <th>Arkansas</th>\n",
+       "      <th>California</th>\n",
+       "      <th>Colorado</th>\n",
+       "      <th>Connecticut</th>\n",
+       "      <th>Delaware</th>\n",
+       "      <th>Georgia</th>\n",
+       "      <th>Idaho</th>\n",
+       "      <th>Illinois</th>\n",
+       "      <th>Indiana</th>\n",
+       "      <th>...</th>\n",
+       "      <th>South Carolina</th>\n",
+       "      <th>South Dakota</th>\n",
+       "      <th>Tennessee</th>\n",
+       "      <th>Texas</th>\n",
+       "      <th>Utah</th>\n",
+       "      <th>Vermont</th>\n",
+       "      <th>Virginia</th>\n",
+       "      <th>West Virginia</th>\n",
+       "      <th>Wisconsin</th>\n",
+       "      <th>Wyoming</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1970</th>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>123.0</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>120.000000</td>\n",
+       "      <td>155.000000</td>\n",
+       "      <td>109.900002</td>\n",
+       "      <td>102.400002</td>\n",
+       "      <td>124.800003</td>\n",
+       "      <td>134.600006</td>\n",
+       "      <td>...</td>\n",
+       "      <td>103.599998</td>\n",
+       "      <td>92.699997</td>\n",
+       "      <td>99.800003</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>65.500000</td>\n",
+       "      <td>122.599998</td>\n",
+       "      <td>124.300003</td>\n",
+       "      <td>114.5</td>\n",
+       "      <td>106.400002</td>\n",
+       "      <td>132.199997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1971</th>\n",
+       "      <td>95.400002</td>\n",
+       "      <td>104.099998</td>\n",
+       "      <td>121.0</td>\n",
+       "      <td>125.500000</td>\n",
+       "      <td>117.599998</td>\n",
+       "      <td>161.100006</td>\n",
+       "      <td>115.699997</td>\n",
+       "      <td>108.500000</td>\n",
+       "      <td>125.599998</td>\n",
+       "      <td>139.300003</td>\n",
+       "      <td>...</td>\n",
+       "      <td>115.000000</td>\n",
+       "      <td>96.699997</td>\n",
+       "      <td>106.300003</td>\n",
+       "      <td>108.900002</td>\n",
+       "      <td>67.699997</td>\n",
+       "      <td>124.400002</td>\n",
+       "      <td>128.399994</td>\n",
+       "      <td>111.5</td>\n",
+       "      <td>105.400002</td>\n",
+       "      <td>131.699997</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1972</th>\n",
+       "      <td>101.099998</td>\n",
+       "      <td>103.900002</td>\n",
+       "      <td>123.5</td>\n",
+       "      <td>134.300003</td>\n",
+       "      <td>110.800003</td>\n",
+       "      <td>156.300003</td>\n",
+       "      <td>117.000000</td>\n",
+       "      <td>126.099998</td>\n",
+       "      <td>126.599998</td>\n",
+       "      <td>149.199997</td>\n",
+       "      <td>...</td>\n",
+       "      <td>118.699997</td>\n",
+       "      <td>103.000000</td>\n",
+       "      <td>111.500000</td>\n",
+       "      <td>108.599998</td>\n",
+       "      <td>71.300003</td>\n",
+       "      <td>138.000000</td>\n",
+       "      <td>137.000000</td>\n",
+       "      <td>117.5</td>\n",
+       "      <td>108.800003</td>\n",
+       "      <td>140.000000</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>3 rows × 39 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State     Alabama    Arkansas  California    Colorado  Connecticut  \\\n",
+       "Year                                                                 \n",
+       "1970    89.800003  100.300003       123.0  124.800003   120.000000   \n",
+       "1971    95.400002  104.099998       121.0  125.500000   117.599998   \n",
+       "1972   101.099998  103.900002       123.5  134.300003   110.800003   \n",
+       "\n",
+       "State    Delaware     Georgia       Idaho    Illinois     Indiana  ...  \\\n",
+       "Year                                                               ...   \n",
+       "1970   155.000000  109.900002  102.400002  124.800003  134.600006  ...   \n",
+       "1971   161.100006  115.699997  108.500000  125.599998  139.300003  ...   \n",
+       "1972   156.300003  117.000000  126.099998  126.599998  149.199997  ...   \n",
+       "\n",
+       "State  South Carolina  South Dakota   Tennessee       Texas       Utah  \\\n",
+       "Year                                                                     \n",
+       "1970       103.599998     92.699997   99.800003  106.400002  65.500000   \n",
+       "1971       115.000000     96.699997  106.300003  108.900002  67.699997   \n",
+       "1972       118.699997    103.000000  111.500000  108.599998  71.300003   \n",
+       "\n",
+       "State     Vermont    Virginia  West Virginia   Wisconsin     Wyoming  \n",
+       "Year                                                                  \n",
+       "1970   122.599998  124.300003          114.5  106.400002  132.199997  \n",
+       "1971   124.400002  128.399994          111.5  105.400002  131.699997  \n",
+       "1972   138.000000  137.000000          117.5  108.800003  140.000000  \n",
+       "\n",
+       "[3 rows x 39 columns]"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "panel.outcome.head(3)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "f1d1821c-b095-4179-8628-0ed95c4edfac",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.069304Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.069107Z",
+     "iopub.status.idle": "2023-10-02T23:28:55.076274Z",
+     "shell.execute_reply": "2023-10-02T23:28:55.075821Z"
+    },
+    "papermill": {
+     "duration": 0.015155,
+     "end_time": "2023-10-02T23:28:55.077453",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.062298",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>Alabama</th>\n",
+       "      <th>Arkansas</th>\n",
+       "      <th>California</th>\n",
+       "      <th>Colorado</th>\n",
+       "      <th>Connecticut</th>\n",
+       "      <th>Delaware</th>\n",
+       "      <th>Georgia</th>\n",
+       "      <th>Idaho</th>\n",
+       "      <th>Illinois</th>\n",
+       "      <th>Indiana</th>\n",
+       "      <th>...</th>\n",
+       "      <th>South Carolina</th>\n",
+       "      <th>South Dakota</th>\n",
+       "      <th>Tennessee</th>\n",
+       "      <th>Texas</th>\n",
+       "      <th>Utah</th>\n",
+       "      <th>Vermont</th>\n",
+       "      <th>Virginia</th>\n",
+       "      <th>West Virginia</th>\n",
+       "      <th>Wisconsin</th>\n",
+       "      <th>Wyoming</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1998</th>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1999</th>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2000</th>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>...</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>3 rows × 39 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State  Alabama  Arkansas  California  Colorado  Connecticut  Delaware  \\\n",
+       "Year                                                                    \n",
+       "1998         0         0           1         0            0         0   \n",
+       "1999         0         0           1         0            0         0   \n",
+       "2000         0         0           1         0            0         0   \n",
+       "\n",
+       "State  Georgia  Idaho  Illinois  Indiana  ...  South Carolina  South Dakota  \\\n",
+       "Year                                      ...                                 \n",
+       "1998         0      0         0        0  ...               0             0   \n",
+       "1999         0      0         0        0  ...               0             0   \n",
+       "2000         0      0         0        0  ...               0             0   \n",
+       "\n",
+       "State  Tennessee  Texas  Utah  Vermont  Virginia  West Virginia  Wisconsin  \\\n",
+       "Year                                                                         \n",
+       "1998           0      0     0        0         0              0          0   \n",
+       "1999           0      0     0        0         0              0          0   \n",
+       "2000           0      0     0        0         0              0          0   \n",
+       "\n",
+       "State  Wyoming  \n",
+       "Year            \n",
+       "1998         0  \n",
+       "1999         0  \n",
+       "2000         0  \n",
+       "\n",
+       "[3 rows x 39 columns]"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "panel.intervention.tail(3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "75911b9d-696c-4128-aef6-5ca086dd5b47",
+   "metadata": {
+    "papermill": {
+     "duration": 0.007773,
+     "end_time": "2023-10-02T23:28:55.091042",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.083269",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Moreover, the method also allows to use the most common `pandas` functions on all data included in the panel directly at once:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "4c62b0d1-74c4-463b-b99c-c6bf31638cfa",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.102729Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.102557Z",
+     "iopub.status.idle": "2023-10-02T23:28:55.107503Z",
+     "shell.execute_reply": "2023-10-02T23:28:55.107166Z"
+    },
+    "papermill": {
+     "duration": 0.012191,
+     "end_time": "2023-10-02T23:28:55.108672",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.096481",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>Alabama</th>\n",
+       "      <th>Arkansas</th>\n",
+       "      <th>California</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1970</th>\n",
+       "      <td>89.800003</td>\n",
+       "      <td>100.300003</td>\n",
+       "      <td>123.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1971</th>\n",
+       "      <td>95.400002</td>\n",
+       "      <td>104.099998</td>\n",
+       "      <td>121.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1972</th>\n",
+       "      <td>101.099998</td>\n",
+       "      <td>103.900002</td>\n",
+       "      <td>123.5</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State     Alabama    Arkansas  California\n",
+       "Year                                     \n",
+       "1970    89.800003  100.300003       123.0\n",
+       "1971    95.400002  104.099998       121.0\n",
+       "1972   101.099998  103.900002       123.5"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# for instance only keeping the first 3 units.\n",
+    "new_panel = panel.iloc[:, :3]\n",
+    "\n",
+    "new_panel.outcome.head(3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fe25f4f2-a620-4092-95f9-d85410e3c9a7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005555,
+     "end_time": "2023-10-02T23:28:55.119943",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.114388",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Also, we can use the `get` method with key word arguments. \n",
+    "\n",
+    "* if `contr == True` then only control units are returned.\n",
+    "* if `treat == True` then units which have been treated at least once are returned.\n",
+    "* if `pre == True` then time steps where no unit is treated is returned.\n",
+    "* if `post == True` then the time steps where at least one unit is treated.\n",
+    "\n",
+    ", for example:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "d1343088-0239-4f3d-a366-e81fd2288e21",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.131885Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.131718Z",
+     "iopub.status.idle": "2023-10-02T23:28:55.136610Z",
+     "shell.execute_reply": "2023-10-02T23:28:55.136246Z"
+    },
+    "papermill": {
+     "duration": 0.012255,
+     "end_time": "2023-10-02T23:28:55.137770",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.125515",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th>State</th>\n",
+       "      <th>California</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1989</th>\n",
+       "      <td>82.400002</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1990</th>\n",
+       "      <td>77.800003</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1991</th>\n",
+       "      <td>68.699997</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "State  California\n",
+       "Year             \n",
+       "1989    82.400002\n",
+       "1990    77.800003\n",
+       "1991    68.699997"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "panel.get('outcome', post=True, treat=True).head(3)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1de8e2c2-96fa-4de5-b40c-9c45b15ab480",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005748,
+     "end_time": "2023-10-02T23:28:55.149359",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.143611",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For more methods please check the `Panel` immplementation directly."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f3dfa728-97bb-4323-93bd-5e8d9a07eb56",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005706,
+     "end_time": "2023-10-02T23:28:55.160820",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.155114",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Using the `Panel` it is also relatively easy to plot the average control versus treatment by:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "e1c51b3c-5270-44e7-b13c-f059c2619bec",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:55.173145Z",
+     "iopub.status.busy": "2023-10-02T23:28:55.172968Z",
+     "iopub.status.idle": "2023-10-02T23:28:56.218315Z",
+     "shell.execute_reply": "2023-10-02T23:28:56.217885Z"
+    },
+    "papermill": {
+     "duration": 1.053922,
+     "end_time": "2023-10-02T23:28:56.220491",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:55.166569",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.\n",
+      "  with pd.option_context('mode.use_inf_as_na', True):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.\n",
+      "  with pd.option_context('mode.use_inf_as_na', True):\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.lines.Line2D at 0x7f9b91d95c30>"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import seaborn as sns\n",
+    "sns.set(rc={'figure.figsize':(12,4)})\n",
+    "\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "avg_control = panel.get('outcome', contr=True).mean(axis=1).to_frame('C')\n",
+    "avg_treat = panel.get('outcome', treat=True).mean(axis=1).to_frame('T')\n",
+    "\n",
+    "plt.subplots(1, 1, figsize=(12, 4))\n",
+    "sns.lineplot(avg_control.join(avg_treat))\n",
+    "plt.axvline(panel.start, color='red')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "641ebeeb-d0dc-435e-88b4-92aab3346a08",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005965,
+     "end_time": "2023-10-02T23:28:56.232874",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.226909",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Part II: The Treatment Effect"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "778a4249-e435-48c6-aad1-a60ea6231182",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005939,
+     "end_time": "2023-10-02T23:28:56.244848",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.238909",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "After bringing the data into the right format, we can use an `Estimator` to make predictions of the treatment effect. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8b7f8574-9b70-4834-8aea-0d1d3841ce6a",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006114,
+     "end_time": "2023-10-02T23:28:56.257309",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.251195",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Like commonly done for time series it is always a good idea to quickly spot check the time series:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "37ed69c1-d7cc-4e2b-a42e-8f97001ba208",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:56.270291Z",
+     "iopub.status.busy": "2023-10-02T23:28:56.270087Z",
+     "iopub.status.idle": "2023-10-02T23:28:56.284866Z",
+     "shell.execute_reply": "2023-10-02T23:28:56.284436Z"
+    },
+    "papermill": {
+     "duration": 0.022895,
+     "end_time": "2023-10-02T23:28:56.286270",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.263375",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<Axes: xlabel='Year'>"
+      ]
+     },
+     "execution_count": 13,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "print(panel.summary())\n",
+    "\n",
+    "panel.outcome.mean(axis=1).plot(figsize=(12, 4))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b3aa51e1-241c-458c-89c2-d31f02b559e7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.008143,
+     "end_time": "2023-10-02T23:28:56.300667",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.292524",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "For example, let us use the popular `DID` estimator to estimate the *Average Treatment Effect on the Treated (ATT)* for the panel data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "b1a08910-e0ee-4416-a2b0-827635281080",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:56.314408Z",
+     "iopub.status.busy": "2023-10-02T23:28:56.314090Z",
+     "iopub.status.idle": "2023-10-02T23:28:56.446791Z",
+     "shell.execute_reply": "2023-10-02T23:28:56.446316Z"
+    },
+    "papermill": {
+     "duration": 0.141064,
+     "end_time": "2023-10-02T23:28:56.448223",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.307159",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect: -27.35                                                              |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect: -31.19                                                              |\n",
+      "|  Observed: 68.81                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.estimators.panel.did import DID\n",
+    "\n",
+    "# initialize an estimator object\n",
+    "estimator = DID()\n",
+    "\n",
+    "# estimate the treatment effect\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "# print the treatment effect summary\n",
+    "print(result.summary(percentage=True, cumulative=True))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "827d36bd-b1db-47a2-9c8b-1908a43fdfbe",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006144,
+     "end_time": "2023-10-02T23:28:56.460832",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.454688",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Now, the treatment effect without any confidence intervals is often not that helpful. Some estimators come with error estimates out of the box and will directly provide them (e.g. `DIDRegression`). For others, we can use an `Error` estimator to attach an error and calculate confidence intervals along with it. \n",
+    "\n",
+    "The following error estimators are available:\n",
+    "\n",
+    "- **Bootstrap**: Randomly sample units (with replacement) from the panel data and estimate the effect.\n",
+    "- **Placebo**: Only sample from control units as use them as placebo.\n",
+    "- **JackKnife**: Leave one out crossvalidation but removing one unit at a time.\n",
+    "\n",
+    "Each error estimate requires a treatment estimated on a new panel derived from the original data set by the corresponding method."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1d38e512-7ae3-4728-bb5d-c03d2e18add1",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006115,
+     "end_time": "2023-10-02T23:28:56.473130",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.467015",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Each estimator has a method called `estimator.error(result, method)` which takes the original `Result` object returned before and the `Error` estimation method that should be used."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "id": "326b096a-65ee-4bab-b059-a52b81b3cfda",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:56.486190Z",
+     "iopub.status.busy": "2023-10-02T23:28:56.485921Z",
+     "iopub.status.idle": "2023-10-02T23:28:58.703454Z",
+     "shell.execute_reply": "2023-10-02T23:28:58.703036Z"
+    },
+    "papermill": {
+     "duration": 2.225531,
+     "end_time": "2023-10-02T23:28:58.704728",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:56.479197",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -27.35 (±2.6887)                                              |\n",
+      "|  Confidence Interval (90%): [-31.77 , -22.93]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 87.70                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect (±SE): -31.19 (±3.0659)                                              |\n",
+      "|  Confidence Interval (90%): [-36.23 , -26.14]                           (-)  |\n",
+      "|  Observed: 68.81                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "\n",
+    "se, runs = estimator.error(result, Bootstrap(n_samples=500))\n",
+    "\n",
+    "print(result.summary(conf=90))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "b009fcde-3f3a-4999-ac75-97ae8976e892",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005816,
+     "end_time": "2023-10-02T23:28:58.716864",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:58.711048",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Similarly, we can use `SDID` as an estimator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "id": "b7ca16f9-6688-4c6a-9a29-40ea3b29d28f",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:58.729368Z",
+     "iopub.status.busy": "2023-10-02T23:28:58.729201Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.319225Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.318840Z"
+    },
+    "papermill": {
+     "duration": 0.597782,
+     "end_time": "2023-10-02T23:28:59.320466",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:58.722684",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                     ATT                                      |\n",
+      "|  Effect (±SE): -15.60 (±2.9161)                                              |\n",
+      "|  Confidence Interval (95%): [-21.32 , -9.8884]                          (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 75.95                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect (±SE): -20.54 (±3.8393)                                              |\n",
+      "|  Confidence Interval (95%): [-28.07 , -13.02]                           (-)  |\n",
+      "|  Observed: 79.46                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Cumulative                                  |\n",
+      "|  Effect (±SE): -187.25 (±34.99)                                              |\n",
+      "|  Confidence Interval (95%): [-255.83 , -118.66]                         (-)  |\n",
+      "|  Observed: 724.20                                                            |\n",
+      "|  Counter Factual: 911.45                                                     |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.estimators.panel.sdid import SDID\n",
+    "from azcausal.core.error import JackKnife\n",
+    "\n",
+    "# initialize an estimator object\n",
+    "estimator = SDID()\n",
+    "\n",
+    "# estimate the treatment effect\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "# here we use JackKnife which is optmized to be run with SDID\n",
+    "estimator.error(result, JackKnife())\n",
+    "\n",
+    "# print the treatment effect summary\n",
+    "print(result.summary(percentage=True, cumulative=True))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "da94a466-0933-4204-8101-76cfb12e31ad",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006063,
+     "end_time": "2023-10-02T23:28:59.332856",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.326793",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Part III: Analysis & Visualization"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d5dd7d35-a04f-4fe8-8808-ea1d42d5e873",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005938,
+     "end_time": "2023-10-02T23:28:59.344946",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.339008",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Lastly, we want to give some idea on how to visualize results. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e409ddd5-4f8a-42f7-8e50-0a146d94978b",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005904,
+     "end_time": "2023-10-02T23:28:59.356728",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.350824",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "To learn more about how the error estimation was originally derived, we can check the corresponding distribution by plotting the estimates of each of the runs:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "id": "0cfab88a-c937-49c5-9bff-c90c11e0dfd4",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.369367Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.369176Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.396508Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.396024Z"
+    },
+    "papermill": {
+     "duration": 0.035524,
+     "end_time": "2023-10-02T23:28:59.398156",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.362632",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1498: FutureWarning: is_categorical_dtype is deprecated and will be removed in a future version. Use isinstance(dtype, CategoricalDtype) instead\n",
+      "  if pd.api.types.is_categorical_dtype(vector):\n",
+      "/Users/blankjul/opt/anaconda3/envs/azcausal/lib/python3.10/site-packages/seaborn/_oldcore.py:1119: FutureWarning: use_inf_as_na option is deprecated and will be removed in a future version. Convert inf values to NaN before operating instead.\n",
+      "  with pd.option_context('mode.use_inf_as_na', True):\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<Axes: xlabel='Year', ylabel='Count'>"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "vv = [run.effect.value for run in runs]\n",
+    "sns.histplot(vv, kde=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0b71c77d-ea2c-451f-b63c-27d31af7d46e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00641,
+     "end_time": "2023-10-02T23:28:59.411195",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.404785",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Each post-analysis will be different depending on the estimator. We would like a give an example of `SDID` here. The available additional information stored by the estimator are:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "id": "6f618940-a493-4751-b886-57bbcea1d752",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.424870Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.424670Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.428005Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.427475Z"
+    },
+    "papermill": {
+     "duration": 0.011773,
+     "end_time": "2023-10-02T23:28:59.429406",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.417633",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "dict_keys(['lambd', 'omega', 'solvers', 'did', 'error'])"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "effect = result.effect\n",
+    "\n",
+    "effect.data.keys()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "73bf58c7-3c17-4a38-be70-3d769d923fa7",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006514,
+     "end_time": "2023-10-02T23:28:59.442531",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.436017",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The DID results give us additional information about how the ATT is actually calculated:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "id": "92282a5c-4c12-4bc7-8d60-6e3a6ea6af81",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.456591Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.456400Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.459783Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.459218Z"
+    },
+    "papermill": {
+     "duration": 0.012021,
+     "end_time": "2023-10-02T23:28:59.461146",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.449125",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'att': -15.603827872733824,\n",
+       " 'delta_contr': -19.192040932672683,\n",
+       " 'delta_treat': -34.795868805406506,\n",
+       " 'pre_contr': 120.49828909527167,\n",
+       " 'post_contr': 101.30624816259899,\n",
+       " 'pre_treat': 95.14586886957318,\n",
+       " 'post_treat': 60.35000006416667}"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "effect['did']"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "243215de-0972-45bf-922f-ab72a27ceca3",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006599,
+     "end_time": "2023-10-02T23:28:59.474501",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.467902",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "The unit weights (`omega`) with at least 1% contribution"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "id": "f0119bda-c9e9-4ca3-b66c-796b3e822025",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.488558Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.488370Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.492948Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.492532Z"
+    },
+    "papermill": {
+     "duration": 0.013168,
+     "end_time": "2023-10-02T23:28:59.494323",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.481155",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "State\n",
+       "Nevada            0.124489\n",
+       "New Hampshire     0.105048\n",
+       "Connecticut       0.078287\n",
+       "Delaware          0.070368\n",
+       "Colorado          0.057513\n",
+       "Illinois          0.053388\n",
+       "Nebraska          0.047853\n",
+       "Montana           0.045135\n",
+       "Utah              0.041518\n",
+       "New Mexico        0.040568\n",
+       "Minnesota         0.039495\n",
+       "Wisconsin         0.036667\n",
+       "West Virginia     0.033569\n",
+       "North Carolina    0.032805\n",
+       "Idaho             0.031468\n",
+       "Ohio              0.031461\n",
+       "Maine             0.028211\n",
+       "Iowa              0.025939\n",
+       "Kansas            0.021605\n",
+       "Pennsylvania      0.015352\n",
+       "Indiana           0.010135\n",
+       "Name: omega, dtype: float64"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "effect['omega'].sort_values(ascending=False).loc[lambda x: x >= 0.01]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fe06f796-dbc5-4740-bad2-317091b84964",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006671,
+     "end_time": "2023-10-02T23:28:59.507839",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.501168",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Similarly, the time weights"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "id": "6b1e5085-f098-4df6-81bc-0073222b6f40",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.521977Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.521806Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.525601Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.525122Z"
+    },
+    "papermill": {
+     "duration": 0.012481,
+     "end_time": "2023-10-02T23:28:59.526990",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.514509",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1988    0.427076\n",
+       "1986    0.366471\n",
+       "1987    0.206453\n",
+       "Name: lambd, dtype: float64"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "effect['lambd'].sort_values(ascending=False).loc[lambda x: x >= 0.01]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "8fa6a33e-4e59-49d7-8e66-d3283d6163c3",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006743,
+     "end_time": "2023-10-02T23:28:59.540593",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.533850",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Or in general the treatment effect over time:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "id": "57924b8d-d6f7-4ce2-9c8a-bdc146b03db2",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.555545Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.555261Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.561500Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.561048Z"
+    },
+    "papermill": {
+     "duration": 0.015544,
+     "end_time": "2023-10-02T23:28:59.562944",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.547400",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>C</th>\n",
+       "      <th>T</th>\n",
+       "      <th>lambd</th>\n",
+       "      <th>W</th>\n",
+       "      <th>att</th>\n",
+       "      <th>CF</th>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>Year</th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "      <th></th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1996</th>\n",
+       "      <td>99.202557</td>\n",
+       "      <td>54.500000</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1</td>\n",
+       "      <td>-19.350137</td>\n",
+       "      <td>73.850137</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1997</th>\n",
+       "      <td>100.035935</td>\n",
+       "      <td>53.799999</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1</td>\n",
+       "      <td>-20.883516</td>\n",
+       "      <td>74.683515</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1998</th>\n",
+       "      <td>100.433993</td>\n",
+       "      <td>52.299999</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1</td>\n",
+       "      <td>-22.781573</td>\n",
+       "      <td>75.081573</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1999</th>\n",
+       "      <td>98.497346</td>\n",
+       "      <td>47.200001</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1</td>\n",
+       "      <td>-25.944925</td>\n",
+       "      <td>73.144926</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2000</th>\n",
+       "      <td>91.437300</td>\n",
+       "      <td>41.599998</td>\n",
+       "      <td>NaN</td>\n",
+       "      <td>1</td>\n",
+       "      <td>-24.484882</td>\n",
+       "      <td>66.084880</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "               C          T  lambd  W        att         CF\n",
+       "Year                                                       \n",
+       "1996   99.202557  54.500000    NaN  1 -19.350137  73.850137\n",
+       "1997  100.035935  53.799999    NaN  1 -20.883516  74.683515\n",
+       "1998  100.433993  52.299999    NaN  1 -22.781573  75.081573\n",
+       "1999   98.497346  47.200001    NaN  1 -25.944925  73.144926\n",
+       "2000   91.437300  41.599998    NaN  1 -24.484882  66.084880"
+      ]
+     },
+     "execution_count": 22,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Control (C), Treatment (T), Time Weights (lambd), Intervention (W), Average Treatment Effect on the Treated (att), Counter Factual (CF)\n",
+    "effect.by_time.tail(5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "id": "27ff5466-4011-48d1-8ee8-cbf842f05c26",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.577930Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.577756Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.599623Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.598959Z"
+    },
+    "papermill": {
+     "duration": 0.030973,
+     "end_time": "2023-10-02T23:28:59.601157",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.570184",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<Axes: xlabel='Year'>"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "effect.by_time[['C', 'CF', 'T']].plot()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6a974214-45a8-4c24-89ee-9880546bbec2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.006984,
+     "end_time": "2023-10-02T23:28:59.615277",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.608293",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Some estimators will have directly a plotting method for the result:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "id": "abaa2162-362c-4313-a095-75107e6303df",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:28:59.630584Z",
+     "iopub.status.busy": "2023-10-02T23:28:59.629925Z",
+     "iopub.status.idle": "2023-10-02T23:28:59.728314Z",
+     "shell.execute_reply": "2023-10-02T23:28:59.727927Z"
+    },
+    "papermill": {
+     "duration": 0.107237,
+     "end_time": "2023-10-02T23:28:59.729568",
+     "exception": false,
+     "start_time": "2023-10-02T23:28:59.622331",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "estimator.plot(result, show=False, CF=True)\n",
+    "None"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.0"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 6.793542,
+   "end_time": "2023-10-02T23:29:00.055903",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/workspace/azcausal/docs/source/getting_started.ipynb",
+   "output_path": "/Users/blankjul/workspace/azcausal/docs/source/getting_started.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:28:53.262361",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

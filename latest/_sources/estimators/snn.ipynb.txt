@@ -1,0 +1,220 @@
+{
+ "cells": [
+  {
+   "cell_type": "raw",
+   "id": "49fe51c2",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005168,
+     "end_time": "2023-10-02T23:29:27.312630",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:27.307462",
+     "status": "completed"
+    },
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    ".. _snn:"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6a85da34",
+   "metadata": {
+    "papermill": {
+     "duration": 0.000894,
+     "end_time": "2023-10-02T23:29:27.314789",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:27.313895",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "## Synthetic Nearest Neighbor (SNN)"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "id": "e5f99480-9a2f-4b68-aeea-02740a5bc83c",
+   "metadata": {
+    "papermill": {
+     "duration": 0.000711,
+     "end_time": "2023-10-02T23:29:27.316270",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:27.315559",
+     "status": "completed"
+    },
+    "raw_mimetype": "text/restructuredtext",
+    "tags": []
+   },
+   "source": [
+    "Please find more details in :cite:p:`snn`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "a4d1e4d1-6f8e-41ab-957d-c6a15c927deb",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-10-02T23:29:27.318674Z",
+     "iopub.status.busy": "2023-10-02T23:29:27.318465Z",
+     "iopub.status.idle": "2023-10-02T23:29:29.005809Z",
+     "shell.execute_reply": "2023-10-02T23:29:29.005395Z"
+    },
+    "papermill": {
+     "duration": 1.690171,
+     "end_time": "2023-10-02T23:29:29.007130",
+     "exception": false,
+     "start_time": "2023-10-02T23:29:27.316959",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      "  0%|          | 0/31 [00:00<?, ?it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      "  3%|▎         | 1/31 [00:00<00:07,  4.04it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      " 16%|█▌        | 5/31 [00:00<00:02,  9.92it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      " 61%|██████▏   | 19/31 [00:00<00:00, 32.08it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      " 77%|███████▋  | 24/31 [00:00<00:00, 31.12it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\r",
+      "100%|██████████| 31/31 [00:00<00:00, 33.34it/s]"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "╭──────────────────────────────────────────────────────────────────────────────╮\n",
+      "|                               CaliforniaProp99                               |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                    Panel                                     |\n",
+      "|  Time Periods: 31 (19/12)                                  total (pre/post)  |\n",
+      "|  Units: 39 (38/1)                                       total (contr/treat)  |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                                                              |\n",
+      "|  Effect (±SE): -21.34 (±2.3756)                                              |\n",
+      "|  Confidence Interval (95%): [-26.00 , -16.68]                           (-)  |\n",
+      "|  Observed: 60.35                                                             |\n",
+      "|  Counter Factual: 81.69                                                      |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Percentage                                  |\n",
+      "|  Effect (±SE): -26.12 (±2.9081)                                              |\n",
+      "|  Confidence Interval (95%): [-31.82 , -20.42]                           (-)  |\n",
+      "|  Observed: 73.88                                                             |\n",
+      "|  Counter Factual: 100.00                                                     |\n",
+      "├──────────────────────────────────────────────────────────────────────────────┤\n",
+      "|                                  Cumulative                                  |\n",
+      "|  Effect (±SE): -256.08 (±28.51)                                              |\n",
+      "|  Confidence Interval (95%): [-311.95 , -200.21]                         (-)  |\n",
+      "|  Observed: 724.20                                                            |\n",
+      "|  Counter Factual: 980.28                                                     |\n",
+      "╰──────────────────────────────────────────────────────────────────────────────╯\n"
+     ]
+    }
+   ],
+   "source": [
+    "from azcausal.core.error import Bootstrap\n",
+    "from azcausal.core.parallelize import Joblib\n",
+    "from azcausal.data import CaliforniaProp99\n",
+    "from azcausal.estimators.panel.snn import SNN\n",
+    "\n",
+    "# create the panel to be fed into the estimator\n",
+    "panel = CaliforniaProp99().panel()\n",
+    "\n",
+    "# initialize an estimator object\n",
+    "estimator = SNN()\n",
+    "\n",
+    "# run the SNN\n",
+    "result = estimator.fit(panel)\n",
+    "\n",
+    "# estimate the standard error\n",
+    "estimator.error(result, Bootstrap(n_samples=31), parallelize=Joblib(progress=True))\n",
+    "\n",
+    "# print out information about the estimate\n",
+    "print(result.summary(title=\"CaliforniaProp99\"))"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.0"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 5.311978,
+   "end_time": "2023-10-02T23:29:31.627294",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "/Users/blankjul/workspace/azcausal/docs/source/estimators/snn.ipynb",
+   "output_path": "/Users/blankjul/workspace/azcausal/docs/source/estimators/snn.ipynb",
+   "parameters": {},
+   "start_time": "2023-10-02T23:29:26.315316",
+   "version": "2.4.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

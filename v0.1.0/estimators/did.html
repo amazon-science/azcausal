@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Difference-in-Difference (DID) &mdash; azcausal 0.1.1 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/nbsphinx-code-cells.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=a58bc63e"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Synthetic Difference-in-Difference (SDID)" href="sdid.html" />
+    <link rel="prev" title="Estimators" href="estimators.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            azcausal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="estimators.html">Estimators</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Difference-in-Difference (DID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdid.html">Synthetic Difference-in-Difference (SDID)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="snnb.html">Synthetic Nearest Neighbor Biclustering (SNNB)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../license.html">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">azcausal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="estimators.html">Estimators</a></li>
+      <li class="breadcrumb-item active">Difference-in-Difference (DID)</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/amazon-science/azcausal/blob/main/docs/source/estimators/did.ipynb" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Difference-in-Difference-(DID)">
+<h1>Difference-in-Difference (DID)<a class="headerlink" href="#Difference-in-Difference-(DID)" title="Link to this heading"></a></h1>
+<p>One of the most well-known estimators is probably Difference-in-Difference (DID). It compares the differences pre- and post-experiment of treatment and control.</p>
+<section id="Panel">
+<h2>Panel<a class="headerlink" href="#Panel" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.data</span> <span class="kn">import</span> <span class="n">CaliforniaProp99</span>
+<span class="kn">from</span> <span class="nn">azcausal.core.error</span> <span class="kn">import</span> <span class="n">Bootstrap</span>
+<span class="kn">from</span> <span class="nn">azcausal.core.parallelize</span> <span class="kn">import</span> <span class="n">Pool</span><span class="p">,</span> <span class="n">Joblib</span>
+<span class="kn">from</span> <span class="nn">azcausal.estimators.panel.did</span> <span class="kn">import</span> <span class="n">DID</span>
+
+
+<span class="c1"># load an example data set with the columns Year, State, PacksPerCapita, treated.</span>
+<span class="n">panel</span> <span class="o">=</span> <span class="n">CaliforniaProp99</span><span class="p">()</span><span class="o">.</span><span class="n">panel</span><span class="p">()</span>
+
+<span class="c1"># initialize an estimator object, here difference in difference (did)</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">DID</span><span class="p">()</span>
+
+<span class="c1"># run the estimator</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">panel</span><span class="p">)</span>
+
+<span class="c1"># plot the results</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;CaliforniaProp99&quot;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># create a process pool for parallelization</span>
+<span class="n">pool</span> <span class="o">=</span> <span class="n">Joblib</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">progress</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="c1"># run the error validation method</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Bootstrap</span><span class="p">(</span><span class="n">n_samples</span><span class="o">=</span><span class="mi">101</span><span class="p">),</span> <span class="n">parallelize</span><span class="o">=</span><span class="n">pool</span><span class="p">)</span>
+
+<span class="c1"># print out information about the estimate</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;CaliforniaProp99&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                               CaliforniaProp99                               |
+├==============================================================================┤
+|                                    Panel                                     |
+|  Time Periods: 31 (19/12)                                  total (pre/post)  |
+|  Units: 39 (38/1)                                       total (contr/treat)  |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                     ATT                                      |
+|  Effect (±SE): -27.35 (±3.1446)                                              |
+|  Confidence Interval (95%): [-33.51 , -21.19]                           (-)  |
+|  Observed: 60.35                                                             |
+|  Counter Factual: 87.70                                                      |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Percentage                                  |
+|  Effect (±SE): -31.19 (±3.5856)                                              |
+|  Confidence Interval (95%): [-38.21 , -24.16]                           (-)  |
+|  Observed: 68.81                                                             |
+|  Counter Factual: 100.00                                                     |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+</section>
+<section id="Regression">
+<h2>Regression<a class="headerlink" href="#Regression" title="Link to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># for the regression we can use either the panel or also directly the data frame</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">CaliforniaProp99</span><span class="p">()</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">State</span><span class="o">=</span><span class="s1">&#39;unit&#39;</span><span class="p">,</span> <span class="n">Year</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="n">PacksPerCapita</span><span class="o">=</span><span class="s1">&#39;outcome&#39;</span><span class="p">,</span> <span class="n">treated</span><span class="o">=</span><span class="s1">&#39;intervention&#39;</span><span class="p">))</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>unit</th>
+      <th>time</th>
+      <th>outcome</th>
+      <th>intervention</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Alabama</td>
+      <td>1970</td>
+      <td>89.800003</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Arkansas</td>
+      <td>1970</td>
+      <td>100.300003</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Colorado</td>
+      <td>1970</td>
+      <td>124.800003</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.estimators.panel.did</span> <span class="kn">import</span> <span class="n">DIDRegressor</span>
+
+<span class="c1"># initialize an estimator object, here difference in difference (did)</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">DIDRegressor</span><span class="p">()</span>
+
+<span class="c1"># fit the estimator</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># print out information about the estimate</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;CaliforniaProp99&quot;</span><span class="p">,</span> <span class="n">conf</span><span class="o">=</span><span class="mi">95</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+╭──────────────────────────────────────────────────────────────────────────────╮
+|                               CaliforniaProp99                               |
+├==============================================================================┤
+|                                     ATT                                      |
+|  Effect (±SE): -27.35 (±4.4095)                                              |
+|  Confidence Interval (95%): [-35.99 , -18.71]                           (-)  |
+|  Observed: 60.35                                                             |
+|  Counter Factual: 87.70                                                      |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Percentage                                  |
+|  Effect (±SE): -31.19 (±5.0279)                                              |
+|  Confidence Interval (95%): [-41.04 , -21.33]                           (-)  |
+|  Observed: 68.81                                                             |
+|  Counter Factual: 100.00                                                     |
+├──────────────────────────────────────────────────────────────────────────────┤
+|                                  Cumulative                                  |
+|  Effect (±SE): -328.19 (±52.91)                                              |
+|  Confidence Interval (95%): [-431.90 , -224.48]                         (-)  |
+|  Observed: 724.20                                                            |
+|  Counter Factual: 1,052.39                                                   |
+╰──────────────────────────────────────────────────────────────────────────────╯
+</pre></div></div>
+</div>
+</section>
+<section id="Event-Study">
+<h2>Event Study<a class="headerlink" href="#Event-Study" title="Link to this heading"></a></h2>
+<p>Exclude the time period -1 and set all DiD in relation to it</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.estimators.panel.did</span> <span class="kn">import</span> <span class="n">EventStudy</span>
+
+<span class="c1"># now perform the event study</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">EventStudy</span><span class="p">(</span><span class="n">n_pre</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="c1"># you can fit this with a data frame or panel</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># show the results in a plot</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Assume that we run DID also before the experiment.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">azcausal.estimators.panel.did</span> <span class="kn">import</span> <span class="n">EventStudy</span>
+
+<span class="c1"># now perform the event study</span>
+<span class="n">estimator</span> <span class="o">=</span> <span class="n">EventStudy</span><span class="p">(</span><span class="n">n_pre</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="c1"># you can fit this with a data frame or panel</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">estimator</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+
+<span class="c1"># show the results in a plot</span>
+<span class="n">estimator</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="estimators.html" class="btn btn-neutral float-left" title="Estimators" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sdid.html" class="btn btn-neutral float-right" title="Synthetic Difference-in-Difference (SDID)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Amazon, Julian Blank.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
