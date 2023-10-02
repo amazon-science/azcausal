@@ -17,7 +17,7 @@ jobs:
           rm -rf azcausal
       - name: Install pytest
         run: |
-          pip install pytest
+          pip install pytest papermill
       - name: Run Tests
         run: |
           pytest -v --maxfail 1
