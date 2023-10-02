@@ -223,18 +223,18 @@ def sdid_unit_weights(panel, omega=None, solver=default_solver(), return_solver_
 
 def fix_omega(units, omega):
     return (pd.DataFrame(index=units)
-    .join(omega)
+    .join(omega, how='left')
     .fillna(0.0)
-    .apply(lambda x: x / x.sum() if x.sum() > 0 else 1 / len(units))
+    .apply(lambda x: (x / x.sum()) * omega.sum() if x.sum() > 0 else 1 / len(units))
     ['omega']
     )
 
 
 def fix_lambd(times, lambd):
     return (pd.DataFrame(index=times)
-    .join(lambd)
+    .join(lambd, how='left')
     .fillna(0.0)
-    .apply(lambda x: x / x.sum() if x.sum() > 0 else 1 / len(times))
+    .apply(lambda x: (x / x.sum()) * lambd.sum() if x.sum() > 0 else 1 / len(times))
     ['lambd']
     )
 

@@ -73,8 +73,8 @@ class Result:
 
         """
         sections = []
-        if hasattr(self.data, 'summary'):
-            sections.append(self.data.summary(**kwargs))
+        if hasattr(self.panel, 'summary'):
+            sections.extend(self.panel.summary(**kwargs).sections)
 
         for effect in self.effects.values():
 

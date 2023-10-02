@@ -13,8 +13,11 @@
 import sys
 from os.path import dirname
 
+
 ROOT = dirname(dirname(dirname(__file__)))
 sys.path.insert(0, ROOT)
+
+from azcausal.version import __version__
 
 # -- Project information -----------------------------------------------------
 
@@ -23,7 +26,8 @@ copyright = '2023, Amazon, Julian Blank'
 author = 'Julian Blank'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.1'
+version = __version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -40,6 +44,8 @@ extensions = [
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -55,11 +61,15 @@ bibtex_bibfiles = ['references.bib']
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+html_baseurl = 'latest/'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_logo = 'logo.png'
+html_favicon = 'logo.ico'
 
 html_context = {
     "display_github": True,
@@ -70,7 +80,7 @@ html_context = {
 }
 
 html_theme_options = {
-    'logo_only': False,
+    'logo_only': True,
     'display_version': True,
     'prev_next_buttons_location': 'bottom',
     'style_external_links': False,
@@ -80,5 +90,5 @@ html_theme_options = {
     'sticky_navigation': True,
     'navigation_depth': 4,
     'includehidden': True,
-    'titles_only': True
+    'titles_only': False
 }

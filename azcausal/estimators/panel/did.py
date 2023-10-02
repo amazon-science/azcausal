@@ -183,7 +183,7 @@ def did_regr(dy):
 class DIDRegressor(Estimator):
     def fit(self, panel, **kwargs):
         # for the regression we need directly the data frame
-        dy = panel.to_frame(index=False) if isinstance(panel, Panel) else panel
+        dy = panel.to_frame(index=False, labels=False) if isinstance(panel, Panel) else panel
 
         # do the regression and get the treatment effect with se
         att, se = did_regr(dy)
@@ -273,12 +273,11 @@ class EventStudy(Estimator):
         # since we use regression create the data frame from the panel (if not directly provided)
         dy = panel
         if not isinstance(panel, pd.DataFrame):
-            dy = panel.to_frame()
+            dy = panel.to_frame(labels=False)
 
         # add columns to have time as integer and whether a unit is treated (at least one intervention) or not
         dz = dy.dropna()
-        dz = dz.assign(treatment=treatment_from_intervention(dy),
-                       itime=time_as_int(dy["time"]))
+        dz = dz.assign(treatment=treatment_from_intervention(dy), itime=time_as_int(dy["time"]))
         dz = dz.sort_values("itime").reset_index().set_index(["unit", "time"])
 
         att, se, by_time, regr = did_event_study(dz, n_pre=self.n_pre, exclude=self.exclude)

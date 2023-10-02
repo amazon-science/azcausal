@@ -9,7 +9,7 @@ class SyntheticEffect(object):
 
     def __init__(self,
                  outcome: pd.DataFrame,
-                 treatment: np.ndarray,
+                 intensity: np.ndarray,
                  intervention: np.ndarray = None,
                  mode: str = 'abs',
                  tags: dict = None) -> None:
@@ -22,8 +22,8 @@ class SyntheticEffect(object):
         outcome
             The outcome as a data frame where index represents time and columns the units.
 
-        treatment
-            The actual treatment value for a specific unit in time (depending on mode relative or absolute).
+        intensity
+            The actual treatment intensity for a specific unit in time (depending on mode relative or absolute).
 
         intervention
             The intervention data frame with 0s and 1s where 1 represents an intervention. This can directly
@@ -40,15 +40,15 @@ class SyntheticEffect(object):
 
         # derive intervention from treatment if not provided (needs to be given if placebo)
         if intervention is None:
-            intervention = (treatment != 0).astype(int)
+            intervention = (intensity != 0).astype(int)
 
-        assert len(outcome) == len(treatment) == len(
+        assert len(outcome) == len(intensity) == len(
             intervention), "The number of time steps in treatment and outcome must be the same"
         if intervention is not None:
-            assert treatment.shape == intervention.shape
+            assert intensity.shape == intervention.shape
 
         self.outcome = outcome
-        self.treatment = treatment
+        self.intensity = intensity
         self.intervention = intervention
         self.mode = mode
         self.tags = tags if tags is not None else dict()
@@ -74,11 +74,11 @@ class SyntheticEffect(object):
         random_state = RandomState(seed)
 
         outcome = self.outcome
-        treatment = self.treatment
+        intensity = self.intensity
         intervention = self.intervention
         mode = self.mode
 
-        _, n_units = treatment.shape
+        _, n_units = intensity.shape
         n_pool = len(outcome.columns)
 
         # select the units from the outcome
@@ -86,9 +86,9 @@ class SyntheticEffect(object):
         true_outcome = outcome.iloc[:, u]
 
         if mode == 'perc':
-            treated_outcome = true_outcome * (1 + treatment)
+            treated_outcome = true_outcome * (1 + intensity)
         elif mode == 'abs':
-            treated_outcome = true_outcome + treatment
+            treated_outcome = true_outcome + intensity
         else:
             raise Exception("Unknown mode. Use 'perc' or 'abs'.")
 

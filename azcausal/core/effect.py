@@ -267,7 +267,7 @@ class Effect:
         out = Output()
         out.text(title, align="center")
 
-        has_se = self.se is not None and self.se is not np.nan
+        has_se = self.se is not None and not np.isnan(self.se)
 
         if not has_se:
             out.text(f"Effect: {self.format(self.value)}")

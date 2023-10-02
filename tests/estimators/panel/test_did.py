@@ -19,7 +19,7 @@ def df():
 @pytest.mark.parametrize("did", [DID(), DIDRegressor()])
 def test_did(panel, did):
     result = did.fit(panel)
-    assert_almost_equal(-27.349111083614947, result["att"].value)
+    assert_almost_equal(-27.349111083614947, result.effect.value)
 
 
 @pytest.mark.parametrize("did", [DID(), DIDRegressor()])

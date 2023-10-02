@@ -21,7 +21,13 @@ class Summary:
         """
 
         super().__init__()
-        self.title = title
+
+        # if a title is provided add it as output to the very beginning
+        if title is not None:
+            output = Output()
+            output.text(title, align="center")
+            sections = [output] + sections
+
         self.sections = sections
 
     def __str__(self):
@@ -31,11 +37,6 @@ class Summary:
 
         # print the top line
         output.tline()
-
-        # print a header section if a title is provided
-        if self.title is not None:
-            output.text(self.title, align="center")
-            output.hrule()
 
         # for each section that is given
         for i, section in enumerate(self.sections):

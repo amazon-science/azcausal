@@ -1,7 +1,10 @@
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
 
 from azcausal.core.output import Output
+from azcausal.core.summary import Summary
 from azcausal.util import argmax
 
 
@@ -81,12 +84,12 @@ class Panel:
             if self.balanced:
                 assert np.all(~np.isnan(df.values)), f"{name} contains `nan` values and thus is not balanced."
 
-    def get_value(self, name):
+    def get_target(self, name):
         if name in self.mapping:
             name = self.mapping[name]
         return self.data.get(name)
 
-    def set_value(self, name, df):
+    def set_target(self, name, df):
         if name in self.mapping:
             name = self.mapping[name]
         self.data[name] = df
@@ -101,16 +104,41 @@ class Panel:
         return Panel(data=self.data, mapping=mapping)
 
     # all values available
-    def values(self):
+    @property
+    def targets(self):
         return list(self.data.keys())
 
     def apply(self, f):
-        data = {k: f(v) for k, v in self.data.items()}
-        return Panel(data=data, mapping=self.mapping)
+        return self.copy(deep=False, data={k: f(v) for k, v in self.data.items()})
+
+    def copy(self, deep=False, **kwargs):
+
+        for k, v in self.__dict__.items():
+            if k not in kwargs:
+                kwargs[k] = v
+
+        if deep:
+            kwargs = deepcopy(kwargs)
+
+        return Panel(**kwargs)
+
+    # ----------------------------------------------- PANDAS -----------------------------------------------------
 
     # map the indicator function for the panel
     def __getitem__(self, key):
         return self.apply(lambda df: df[key])
+
+    @property
+    def columns(self):
+        return self.intervention.columns
+
+    @property
+    def shape(self):
+        return self.intervention.shape
+
+    @property
+    def index(self):
+        return self.intervention.index
 
     @property
     def loc(self):
@@ -132,24 +160,63 @@ class Panel:
 
         return Index()
 
-    def to_frame(self, index=False):
-        outcome = self.outcome.unstack().to_frame("outcome")
-        intervention = self.intervention.unstack().to_frame("intervention")
-        dy = outcome.join(intervention)
-        dy.index = dy.index.set_names(["unit", "time"])
+    def to_frame(self,
+                 index: bool = False,
+                 labels: bool = True,
+                 targets: list = None):
+        """
+        Converts all the panels back to a data frame which will always be balanced.
 
+        Parameters
+        ----------
+        index
+            If true, the result has the multi-index (time, unit).
+
+        labels
+            If true, then the original target names will be used.
+            Otherwise, it will be a simple representation using (time, unit, outcome).
+
+        targets
+            What targets should be included in the panel
+
+        Returns
+        -------
+        df
+            A pd.DataFrame object created from the panel data.
+
+        """
+
+        # get an empty panel (balanced)
+        df = pd.DataFrame({}, index=pd.MultiIndex.from_product([self.index, self.columns]))
+
+        # if not provided use all targets
+        if targets is None:
+            targets = self.data.keys()
+
+        # join each of the targets
+        for target in targets:
+            df = df.join(self.get_target(target).stack().to_frame(target), how="left")
+
+        # remap the name of each target
+        if not labels:
+            df.index = df.index.set_names(["time", "unit"])
+            df = df.rename(columns={self.mapping['outcome']: 'outcome', self.mapping['intervention']: 'intervention'})
+
+        # reset the index if desired
         if not index:
-            dy = dy.reset_index()
+            df = df.reset_index()
 
-        return dy
+        return df
 
-    def get(self, value, time=slice(None), units=slice(None), pre=False, post=False, trim=False,
+    # ----------------------------------------------- CORE -----------------------------------------------------
+
+    def get(self, target, time=slice(None), units=slice(None), pre=False, post=False,
             treat=False, contr=False, to_numpy=False, transpose=False):
         """
 
         Parameters
         ----------
-        value : str
+        target : str
             The value that is being returned of the panel, e.g. Y for observations or W for intervention values.
         time : slice or list
             Whether only a specific time range should be included.
@@ -159,8 +226,6 @@ class Panel:
             Whether the time should be set to the period before intervention
         post : bool
             Whether the time should be set after at least one intervention has been applied.
-        trim : bool
-            Removes trailing time periods where no interventions in any units have occurred.
         treat : bool
             Whether only treatment units should be returned.
         contr : bool
@@ -178,11 +243,9 @@ class Panel:
         assert not (treat and contr), "The usage of treat and contr at the same time is not permitted."
 
         if pre:
-            time = self.time(pre=True, trim=trim)
+            time = self.time(pre=True)
         elif post:
-            time = self.time(post=True, trim=trim)
-        elif trim:
-            time = self.time(trim=trim)
+            time = self.time(post=True)
 
         if treat:
             units = self.w
@@ -190,7 +253,11 @@ class Panel:
             units = ~self.w
 
         # query the data frame given the input
-        dy = self.get_value(value).loc[time, units]
+        dy = self.get_target(target)
+        assert dy is not None, f"Target {target} not found. Targets available {self.targets}."
+
+        # only get the subset that is requested
+        dy = dy.loc[time, units]
 
         # convert to numpy if desired
         if to_numpy:
@@ -233,7 +300,19 @@ class Panel:
 
     # ----------------------------------------------- TIME -----------------------------------------------------
 
-    def time(self, pre=False, post=False, contr=False, treat=False, trim=False):
+    def trim(self):
+        """
+        Removes trailing observations with zero interventions (after the first intervention has already happened).
+
+        Returns
+        -------
+        panel
+            A new panel where trailing observations are removed.
+
+        """
+        return self.loc[:self.latest_end]
+
+    def time(self, pre=False, post=False, contr=False, treat=False):
         """
 
         Parameters
@@ -246,8 +325,6 @@ class Panel:
             Time steps where at least one treatment has occurred
         contr : bool
             Time steps where no treatment in any unit has occurred
-        trim : bool
-            Removes trailing time periods where no treatments in any units have occurred.
 
         Returns
         -------
@@ -257,12 +334,7 @@ class Panel:
         """
         time = np.array(self.intervention.index)
 
-        if trim:
-            t = np.array(self.wp)
-            t[:t.argmax()] = True
-            t = ~t
-        else:
-            t = np.full(len(time), False)
+        t = np.full(len(time), False)
 
         if treat:
             time = time[self.wp & ~t]
@@ -271,10 +343,7 @@ class Panel:
         elif pre:
             time = time[:self.wp.argmax()]
         elif post:
-            if trim and t.sum() > 0:
-                time = time[self.wp.argmax():t.argmax()]
-            else:
-                time = time[self.wp.argmax():]
+            time = time[self.wp.argmax():]
 
         return time
 
@@ -359,19 +428,19 @@ class Panel:
 
     @property
     def outcome(self):
-        return self.get_value('outcome')
+        return self.get_target('outcome')
 
     @outcome.setter
     def outcome(self, df):
-        self.set_value('outcome', df)
+        self.set_target('outcome', df)
 
     @property
     def intervention(self):
-        return self.get_value('intervention')
+        return self.get_target('intervention')
 
     @intervention.setter
     def intervention(self, df):
-        self.set_value('intervention', df)
+        self.set_target('intervention', df)
 
     def n_treatments(self):
         return len(np.unique(self.intervention.values)) - 1
@@ -382,10 +451,6 @@ class Panel:
         else:
             mask = self.intervention.values == treatment
         return mask.sum()
-
-    def copy(self):
-        return Panel(self.outcome.copy(), self.intervention.copy())
-
     @property
     def n_pre(self):
         return self.n_time(pre=True)
@@ -408,8 +473,9 @@ class Panel:
     # ----------------------------------------------- OUTPUT -----------------------------------------------------
 
     def summary(self, **kwargs):
-        return (Output()
-                .text("Panel", align="center")
-                .texts([f"Time Periods: {self.n_time()} ({self.n_pre}/{self.n_post})", "total (pre/post)"])
-                .texts([f"Units: {self.n_units()} ({self.n_contr}/{self.n_treat})", "total (contr/treat)"])
-                )
+        output = (Output()
+                  .text("Panel", align="center")
+                  .texts([f"Time Periods: {self.n_time()} ({self.n_pre}/{self.n_post})", "total (pre/post)"])
+                  .texts([f"Units: {self.n_units()} ({self.n_contr}/{self.n_treat})", "total (contr/treat)"])
+                  )
+        return Summary([output])

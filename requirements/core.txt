@@ -2,7 +2,7 @@ numpy >= 1.2
 pandas
 scipy
 tqdm
-matplotlib
+matplotlib>=3.6
 seaborn
 statsmodels
 linearmodels

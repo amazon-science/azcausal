@@ -48,7 +48,7 @@ class CaliforniaProp99(DataSet):
     def panel(self):
         data = self.load()
         data = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")
-        return Panel(data['PacksPerCapita'], data['treated'])
+        return Panel('PacksPerCapita', 'treated', data=data)
 
     def remote(self):
         return "https://raw.githubusercontent.com/synth-inference/synthdid/master/data/california_prop99.csv"
