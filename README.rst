@@ -43,13 +43,10 @@ Usage
     df = CaliforniaProp99().load()
 
     # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    outcome, intervention = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
-
-    # if there are nan values it was not balanced in the first place.
-    assert np.isnan(outcome.values).sum() == 0, "The panel is not balanced."
+    data = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
 
     # create a panel object to access observations conveniently
-    panel = Panel(outcome, intervention)
+    panel = Panel(outcome="PacksPerCapita", intervention="treated", data=data)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
@@ -66,7 +63,6 @@ Usage
 
     # print out information about the estimate
     print(result.summary(title="CaliforniaProp99"))
-
 
 
 .. image:: docs/source/images/sdid.png
