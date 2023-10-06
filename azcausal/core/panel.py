@@ -334,12 +334,10 @@ class Panel:
         """
         time = np.array(self.intervention.index)
 
-        t = np.full(len(time), False)
-
         if treat:
-            time = time[self.wp & ~t]
+            time = time[self.wp]
         elif contr:
-            time = time[~self.wp & ~t]
+            time = time[~self.wp]
         elif pre:
             time = time[:self.wp.argmax()]
         elif post:
