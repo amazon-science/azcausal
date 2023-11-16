@@ -1,11 +1,8 @@
-import numpy as np
-
-from azcausal.core.error import Placebo
+from azcausal.core.error import JackKnife
 from azcausal.core.panel import Panel
-from azcausal.core.parallelize import Joblib
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.sdid import SDID
-from azcausal.util import to_matrices
+from azcausal.util import to_matrix, intervention_from_outcome
 
 if __name__ == '__main__':
 
@@ -13,28 +10,27 @@ if __name__ == '__main__':
     df = CaliforniaProp99().load()
 
     # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    data = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
+    outcome = to_matrix(df, "Year", "State", "PacksPerCapita", fillna=0.0)
 
-    # if there are nan values it was not balanced in the first place.
-    assert np.isnan(data['treated'].values).sum() == 0, "The panel is not balanced."
+    # the time when the intervention started
+    start_time = df.query("treated == 1")["Year"].min()
+
+    # the units that have been treated
+    treat_units = list(df.query("treated == 1")["State"].unique())
+
+    # create the intervention matrix
+    intervention = intervention_from_outcome(outcome, start_time, treat_units)
 
     # create a panel object to access observations conveniently
-    panel = Panel(outcome='PacksPerCapita', intervention='treated', data=data)
+    panel = Panel(outcome, intervention)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = SDID()
+    estimator = SDID(regression=True)
 
     # run the estimator
     result = estimator.fit(panel)
 
-    # create a thread pool for parallelization
-    pool = Joblib(progress=True)
-
-    # run the error validation method
-    method = Placebo(n_samples=11)
-    estimator.error(result, method, parallelize=pool)
-
-    # finally plot the results
+    # show the results in a plot
     estimator.plot(result, CF=True, C=True)
 
     # print out information about the estimate

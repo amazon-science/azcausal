@@ -13,7 +13,7 @@ from azcausal.core.result import Result
 class Error(object):
 
     def __init__(self,
-                 random_state=RandomState(42),
+                 random_state=None,
                  n_samples=None) -> None:
         """
         Generally, we want to attach confidence intervals to our estimates. One way of doing this is by re-running
@@ -31,6 +31,10 @@ class Error(object):
 
         super().__init__()
         self.n_samples = n_samples
+
+        if random_state is None:
+            random_state = RandomState(42)
+
         self.random_state = random_state
 
     def run(self,
@@ -228,19 +232,33 @@ class Placebo(Error):
 # ---------------------------------------------------------------------------------------------------------
 
 
+def by_axis(panel, axis):
+    if axis == 'units':
+        ww = panel.w
+        ss = lambda x: (slice(None), x)
+    elif axis == 'time':
+        ww = panel.wp
+        ss = lambda x: (x, slice(None))
+    else:
+        raise Exception("The 'axis' keyword either needs to be 'units' or 'time'.")
+
+    return len(ww), ww, ss
+
+
 def bootstrap_random(panel: Panel,
                      n_max_retry: int,
-                     random_state: RandomState):
-    # the number of units in the panel
-    n = panel.n_units()
+                     random_state: RandomState,
+                     axis='units'):
+    # get the axis relevant data
+    n, ww, ss = by_axis(panel, axis)
 
     n_retry = 0
     while True:
-        u = random_state.choice(np.arange(n), size=n, replace=True)
-        p = panel.iloc[:, u]
+        x = np.sort(random_state.choice(np.arange(n), size=n, replace=True))
+        p = panel.iloc[ss(x)]
 
         # if we have at least one treatment unit we are done
-        if p.n_units(treat=True) > 0:
+        if p.n_interventions() > 0:
             break
 
         # keep track of how often we resample
@@ -249,28 +267,32 @@ def bootstrap_random(panel: Panel,
             break
 
     # if after retries we have no treatment units -> then repair the sample to have exactly one
-    if p.n_units(treat=True) == 0:
-        treat_units = np.where(panel.w)[0]
-        u[0] = random_state.choice(treat_units)
-        p = panel.iloc[:, u]
+    if p.n_interventions() == 0:
+        jj = np.where(ww)[0]
+        x[0] = random_state.choice(jj)
+        p = panel.iloc[ss(x)]
 
     return p
 
 
 def bootstrap_stratified(panel: Panel,
-                         random_state: RandomState):
-    # sample from treated units
-    pool = np.where(panel.w)[0]
-    u_treat = random_state.choice(pool, size=panel.n_treat, replace=True)
+                         random_state: RandomState,
+                         axis='units'):
+    # get the axis relevant data
+    n, ww, f_select = by_axis(panel, axis)
 
-    # sample from control units
-    pool = np.where(~panel.w)[0]
-    u_contr = random_state.choice(pool, size=panel.n_contr, replace=True)
+    # sample from control
+    pool = np.where(~ww)[0]
+    contr = random_state.choice(pool, size=len(pool), replace=True)
+
+    # sample from treated
+    pool = np.where(ww)[0]
+    treat = random_state.choice(pool, size=len(pool), replace=True)
 
     # create the panel
-    u = np.concatenate([u_treat, u_contr])
+    x = np.sort(np.concatenate([contr, treat]))
 
-    return panel.iloc[:, u]
+    return panel.iloc[f_select(x)]
 
 
 # see https://towardsdatascience.com/the-bayesian-bootstrap-6ca4a1d45148
@@ -314,6 +336,7 @@ class Bootstrap(Error):
                  mode="random",
                  n_max_retry=5,
                  alpha=4.0,
+                 axis='units',
                  **kwargs) -> None:
         """
         The `Bootstrap` method samples from the `Panel` with replacement. Different modes are supported:
@@ -342,6 +365,7 @@ class Bootstrap(Error):
         self.n_samples = n_samples
         self.mode = mode
         self.n_max_retry = n_max_retry
+        self.axis = axis
         self.alpha = alpha
 
     def se(self, values):
@@ -351,9 +375,9 @@ class Bootstrap(Error):
     def generate(self, panel):
         for _ in range(self.n_samples):
             if self.mode == "random":
-                yield bootstrap_random(panel, self.n_max_retry, self.random_state)
+                yield bootstrap_random(panel, self.n_max_retry, self.random_state, self.axis)
             elif self.mode == "stratified":
-                yield bootstrap_stratified(panel, self.random_state)
+                yield bootstrap_stratified(panel, self.random_state, self.axis)
             elif self.mode == "bayes":
                 yield bootstrap_bayes(panel, self.alpha, self.random_state)
             else:

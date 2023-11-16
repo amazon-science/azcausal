@@ -7,7 +7,9 @@ from azcausal.core.error import JackKnife, Error
 from azcausal.core.estimator import Estimator
 from azcausal.core.result import Result
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify
-from azcausal.estimators.panel.did import did_from_data
+from azcausal.estimators.panel.did import did_from_data, did_regr
+from azcausal.util import full_like
+import statsmodels.formula.api as smf
 
 
 # this returns the default solver as proposed in the paper
@@ -17,10 +19,50 @@ def default_solver():
                         func_sparsify=func_simple_sparsify)
 
 
+def sdid_regr(panel, lambd, omega):
+    # get all the time weights including uniform ones for post experiment
+    time_weights = (full_like(panel.intervention)
+                    .apply(lambda dd: pd.Series(lambd.get(dd.name), index=dd.index), axis=1)
+                    .fillna(1 / panel.n_time(post=True))
+                    )
+
+    # create the unit weights including uniform ones for treatment units
+    ww = np.full(panel.n_units(), np.nan)
+    ww[~panel.w], ww[panel.w] = omega.values, 1 / panel.n_treat
+
+    unit_weights = (full_like(panel.intervention)
+                    .apply(lambda dd: pd.Series(ww, index=panel.columns), axis=1)
+                    )
+
+    # create the panel to be solved using regression
+    df = (panel
+          .with_targets(unit_weights=unit_weights, time_weights=time_weights)
+          .apply(lambda dd: dd.set_axis([f"Unit {i}" for i in range(len(dd.columns))], axis=1))
+          .to_frame(labels=False)
+          .assign(post=lambda dd: dd['time'].isin(dd.query("intervention == 1")['time'].unique()).astype(int))
+          .assign(treat=lambda dd: dd['unit'].isin(dd.query("intervention == 1")['unit'].unique()).astype(int))
+          .assign(weight=lambda dd: (dd['unit_weights'] * dd['time_weights']) + 1e-128)
+          )
+
+    # do the regression to get the treatment effect
+    res = smf.wls("outcome ~ post*treat", data=df, weights=df["weight"]).fit()
+    att, se = res.params["post:treat"], res.bse["post:treat"]
+    # print(res.summary())
+
+    # the panel ols method returns different results.
+    # att_regr, se = did_regr(df, weights=df.set_index(["unit", "time"])['weight'])
+
+    n_time, n_units = panel.n_time(), panel.n_units()
+    dof = (n_time * n_units) - (n_time + n_units) - 1
+
+    return att, se, dof
+
+
 class SDID(Estimator):
 
     def __init__(self,
                  solver=default_solver(),
+                 regression=False,
                  **kwargs) -> None:
         """
 
@@ -37,13 +79,24 @@ class SDID(Estimator):
         solver
             A dictionary providing a solver object for the keys 'lambd' (time weights) and 'omega' (unit weights)
 
+        regression
+            Whether the SDID runs with a regression returning also estimates of the standard error directly.
+
         """
         super().__init__(**kwargs)
 
         # if a solver is provided it use it for time and units weights at the same time
         self.solvers = dict(lambd=solver, omega=solver) if not isinstance(solver, dict) else solver
 
-    def fit(self, panel, lambd=None, omega=None, optimize=True):
+        # whether the did regression should be run
+        self.regression = regression
+
+    def fit(self, panel, lambd=None, omega=None, optimize=True, regression=None):
+
+        # check whether we should get the att by using regression
+        if regression is None:
+            regression = self.regression
+
         solvers = dict()
 
         # find the time weights if not provided / requested
@@ -71,10 +124,16 @@ class SDID(Estimator):
 
         # get the did estimates from the simple panel
         did, by_time = did_from_data(dx)
+        se, dof = None, None
+
+        # we can additional use the regression to get a read of the standard error
+        if regression:
+            att_regr, se, dof = sdid_regr(panel, lambd, omega)
+            assert np.allclose(did['att'], att_regr, atol=1e-5), "ERROR: Regression returned a different ATT."
 
         data = dict(lambd=lambd, omega=omega, solvers=solvers, did=did)
-        att = Effect(did["att"], observed=did["post_treat"], multiplier=panel.n_interventions(), by_time=by_time,
-                     data=data, name="ATT")
+        att = Effect(did["att"], observed=did["post_treat"], se=se, dof=dof, multiplier=panel.n_interventions(),
+                     by_time=by_time, data=data, name="ATT")
 
         return Result(dict(att=att), panel=panel, estimator=self)
 
@@ -82,7 +141,9 @@ class SDID(Estimator):
               result: Result,
               optimize: bool = True,
               error: Error = None,
-              low_memory: bool = False, **kwargs):
+              low_memory: bool = False,
+              regression: bool = False,
+              **kwargs):
         """
 
 
@@ -97,6 +158,8 @@ class SDID(Estimator):
             Whether the refit is occurring during error estimation.
         low_memory
             Whether the result should be stored without any additional data.
+        regression
+            Whether the regression should be used even when only refitted.
 
         Returns
         -------
@@ -110,7 +173,7 @@ class SDID(Estimator):
             if type(error) == JackKnife:
                 optimize = False
 
-        return Refit(result, optimize=optimize)
+        return Refit(result, optimize=optimize, regression=regression)
 
     def plot(self, result, title=None, CF=False, C=True, show=True):
         return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
@@ -123,7 +186,7 @@ class SDID(Estimator):
 
 class Refit:
 
-    def __init__(self, result, optimize=True, low_memory=False) -> None:
+    def __init__(self, result, regression=False, optimize=True, low_memory=False) -> None:
         self.f_estimate = result.estimator.fit
 
         effect = result.effect
@@ -132,9 +195,11 @@ class Refit:
 
         self.low_memory = low_memory
         self.optimize = optimize
+        self.regression = regression
 
     def __call__(self, panel):
-        result = self.f_estimate(panel, lambd=self.lambd, omega=self.omega, optimize=self.optimize)
+        result = self.f_estimate(panel, lambd=self.lambd, omega=self.omega, optimize=self.optimize,
+                                 regression=self.regression)
 
         # only keep the effects of the result (not the data)
         if self.low_memory:
@@ -223,11 +288,12 @@ def sdid_unit_weights(panel, omega=None, solver=default_solver(), return_solver_
 
 def fix_omega(units, omega):
     return (pd.DataFrame(index=units)
-    .join(omega, how='left')
+    .join(omega)
     .fillna(0.0)
-    .apply(lambda x: (x / x.sum()) * omega.sum() if x.sum() > 0 else 1 / len(units))
+    .apply(lambda x: x / x.sum() if x.sum() > 0 else 1 / len(units))
     ['omega']
     )
+
 
 
 def fix_lambd(times, lambd):

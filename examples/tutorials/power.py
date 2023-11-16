@@ -1,17 +1,15 @@
 import numpy as np
 
-from azcausal.core.error import Bootstrap
 from azcausal.core.performance import power
 from azcausal.core.synth import SyntheticEffect
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.did import DID
+from azcausal.estimators.panel.sdid import SDID
 
 
 # define a function that provides a result object (with error) given a panel
 def f_estimate(panel):
-    estimator = DID()
+    estimator = SDID(regression=True)
     result = estimator.fit(panel)
-    estimator.error(result, Bootstrap(n_samples=21))
     return result
 
 

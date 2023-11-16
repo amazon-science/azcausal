@@ -1,10 +1,9 @@
 import numpy as np
 
-from azcausal.core.error import Placebo
+from azcausal.core.error import Bootstrap
 from azcausal.core.panel import Panel
-from azcausal.core.parallelize import Joblib
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.sdid import SDID
+from azcausal.estimators.panel.fuw import FixedUnitWeightsEstimator
 from azcausal.util import to_matrices
 
 if __name__ == '__main__':
@@ -21,21 +20,15 @@ if __name__ == '__main__':
     # create a panel object to access observations conveniently
     panel = Panel(outcome='PacksPerCapita', intervention='treated', data=data)
 
-    # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = SDID()
+    # initialize an estimator object
+    estimator = FixedUnitWeightsEstimator()
 
     # run the estimator
     result = estimator.fit(panel)
 
-    # create a thread pool for parallelization
-    pool = Joblib(progress=True)
-
     # run the error validation method
-    method = Placebo(n_samples=11)
-    estimator.error(result, method, parallelize=pool)
-
-    # finally plot the results
-    estimator.plot(result, CF=True, C=True)
+    method = Bootstrap(n_samples=100)
+    estimator.error(result, method)
 
     # print out information about the estimate
     print(result.summary(title="CaliforniaProp99"))

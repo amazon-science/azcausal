@@ -152,7 +152,7 @@ class DID(Estimator):
 # Regression-Based DID (can also be used for staggered interventions)
 # ---------------------------------------------------------------------------------------------------------
 
-def did_regr(dy):
+def did_regr(dy, weights=None):
     """
     Calculates Difference-in-Difference (DiD) through regression (this also works for staggered interventions).
     This also provides a standard error of the estimate directly.
@@ -168,8 +168,9 @@ def did_regr(dy):
     # the simple formula to calculate DiD
     formula = 'outcome ~ intervention + EntityEffects + TimeEffects'
     try:
-        res = PanelOLS.from_formula(formula=formula, data=dy).fit(low_memory=True)
+        res = PanelOLS.from_formula(formula=formula, data=dy, weights=weights).fit(low_memory=True)
         # res = smf.ols(formula='outcome ~ intervention + C(unit) + C(time)', data=dy.reset_index()).fit()
+        # print(res.summary)
 
         att = res.params["intervention"]
         se = res.std_errors["intervention"]

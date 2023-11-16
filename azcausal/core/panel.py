@@ -51,10 +51,10 @@ class Panel:
             confounders = list()
 
         # set the data directly if provided not via string
-        if not isinstance(intervention, str):
+        if isinstance(intervention, pd.DataFrame):
             data['intervention'] = intervention
             intervention = 'intervention'
-        if not isinstance(outcome, str):
+        if isinstance(outcome, pd.DataFrame):
             data['outcome'] = outcome
             outcome = 'outcome'
 
@@ -94,6 +94,15 @@ class Panel:
             name = self.mapping[name]
         self.data[name] = df
 
+        return self
+
+    def with_targets(self, **kwargs):
+        data = self.data.copy()
+        for k, v in kwargs.items():
+            data[k] = v
+
+        return self.copy(deep=False, data=data)
+
     # select a specific value as outcome
     def select(self, value: str):
 
@@ -109,7 +118,8 @@ class Panel:
         return list(self.data.keys())
 
     def apply(self, f):
-        return self.copy(deep=False, data={k: f(v) for k, v in self.data.items()})
+        data = {k: f(v) for k, v in self.data.items()}
+        return self.copy(deep=False, data=data)
 
     def copy(self, deep=False, **kwargs):
 
@@ -430,7 +440,7 @@ class Panel:
 
     @outcome.setter
     def outcome(self, df):
-        self.set_target('outcome', df)
+        return self.set_target('outcome', df)
 
     @property
     def intervention(self):
@@ -438,7 +448,7 @@ class Panel:
 
     @intervention.setter
     def intervention(self, df):
-        self.set_target('intervention', df)
+        return self.set_target('intervention', df)
 
     def n_treatments(self):
         return len(np.unique(self.intervention.values)) - 1
@@ -449,6 +459,7 @@ class Panel:
         else:
             mask = self.intervention.values == treatment
         return mask.sum()
+
     @property
     def n_pre(self):
         return self.n_time(pre=True)

@@ -26,7 +26,7 @@ def wrap_yield(iterable, f):
         yield f(e)
 
 
-def full_like(df, value, dtype=None):
+def full_like(df, value=np.nan, dtype=None):
     if isinstance(df, pd.Series):
         dx = pd.Series(value, df.index)
     elif isinstance(df, pd.DataFrame):
