@@ -89,6 +89,13 @@ def to_matrices(df, index, cols, *values, fillna=None):
     return {value: to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values}
 
 
+def treatment_and_post_from_intervention(df):
+    return (df.assign(treatment=lambda dx: dx['unit'].isin(dx.query("intervention == 1")['unit'].unique()))
+            .assign(post=lambda dx: dx['time'].isin(dx.query("intervention == 1")['time'].unique()))
+            .astype(dict(treatment=int, post=int))
+            )
+
+
 def to_balanced(dy):
     p = pd.MultiIndex.from_product(dy.index.levels, names=dy.index.names)
     return dy.reindex(p, fill_value=0)

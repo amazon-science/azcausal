@@ -212,6 +212,13 @@ class Panel:
             df.index = df.index.set_names(["time", "unit"])
             df = df.rename(columns={self.mapping['outcome']: 'outcome', self.mapping['intervention']: 'intervention'})
 
+        # set the columns for treatment and post (can be useful for some analysis)
+        df = (df
+              .assign(post=lambda dx: df.index.get_level_values(0).isin(self.time(post=True)))
+              .assign(treatment=lambda dx: df.index.get_level_values(1).isin(self.units(treat=True)))
+              .astype(dict(post=int, treatment=int))
+              )
+
         # reset the index if desired
         if not index:
             df = df.reset_index()

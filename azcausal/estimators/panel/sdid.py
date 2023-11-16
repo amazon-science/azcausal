@@ -9,7 +9,6 @@ from azcausal.core.result import Result
 from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify
 from azcausal.estimators.panel.did import did_from_data, did_regr
 from azcausal.util import full_like
-import statsmodels.formula.api as smf
 
 
 # this returns the default solver as proposed in the paper
@@ -40,17 +39,12 @@ def sdid_regr(panel, lambd, omega):
           .apply(lambda dd: dd.set_axis([f"Unit {i}" for i in range(len(dd.columns))], axis=1))
           .to_frame(labels=False)
           .assign(post=lambda dd: dd['time'].isin(dd.query("intervention == 1")['time'].unique()).astype(int))
-          .assign(treat=lambda dd: dd['unit'].isin(dd.query("intervention == 1")['unit'].unique()).astype(int))
+          .assign(treatment=lambda dd: dd['unit'].isin(dd.query("intervention == 1")['unit'].unique()).astype(int))
           .assign(weight=lambda dd: (dd['unit_weights'] * dd['time_weights']) + 1e-128)
           )
 
     # do the regression to get the treatment effect
-    res = smf.wls("outcome ~ post*treat", data=df, weights=df["weight"]).fit()
-    att, se = res.params["post:treat"], res.bse["post:treat"]
-    # print(res.summary())
-
-    # the panel ols method returns different results.
-    # att_regr, se = did_regr(df, weights=df.set_index(["unit", "time"])['weight'])
+    att, se = did_regr(df, weights=df['weight'])
 
     n_time, n_units = panel.n_time(), panel.n_units()
     dof = (n_time * n_units) - (n_time + n_units) - 1
@@ -124,7 +118,7 @@ class SDID(Estimator):
 
         # get the did estimates from the simple panel
         did, by_time = did_from_data(dx)
-        se, dof = None, None
+        se, dof = np.nan, None
 
         # we can additional use the regression to get a read of the standard error
         if regression:

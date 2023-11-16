@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
+import statsmodels.formula.api as smf
 from linearmodels import PanelOLS
 from linearmodels.panel.utility import AbsorbingEffectError
 from matplotlib import pyplot as plt
+from numpy.random import RandomState
 
 from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
@@ -152,7 +154,7 @@ class DID(Estimator):
 # Regression-Based DID (can also be used for staggered interventions)
 # ---------------------------------------------------------------------------------------------------------
 
-def did_regr(dy, weights=None):
+def did_regr_panel(dy, weights=None):
     """
     Calculates Difference-in-Difference (DiD) through regression (this also works for staggered interventions).
     This also provides a standard error of the estimate directly.
@@ -181,13 +183,57 @@ def did_regr(dy, weights=None):
     return att, se
 
 
+def did_regr(dy, weights=None):
+    assert all([c in dy.columns for c in ['outcome', 'treatment', 'post']])
+
+    formula = 'outcome ~ treatment * post'
+    try:
+        if weights is None:
+            res = smf.ols(formula=formula, data=dy.reset_index()).fit()
+        else:
+            res = smf.wls(formula=formula, data=dy.reset_index(), weights=weights).fit()
+        # print(res.summary())
+
+        att = res.params["treatment:post"]
+        se = res.bse["treatment:post"]
+
+    except AbsorbingEffectError:
+        att, se = 0.0, 0.0
+
+    # TODO: Figure out why this returns different results.
+    # formula = 'outcome ~ intervention'
+    # try:
+    #     if weights:
+    #         res = smf.wls(formula=formula, data=dy.reset_index(), weights=weights).fit()
+    #     else:
+    #         res = smf.ols(formula=formula, data=dy.reset_index()).fit()
+    #     # print(res.summary())
+    #
+    #     att = res.params["intervention"]
+    #     se = res.bse["intervention"]
+    #
+    # except AbsorbingEffectError:
+    #     att, se = 0.0, 0.0
+
+    return att, se
+
+
 class DIDRegressor(Estimator):
+
+    def __init__(self, use_panel_regr=False, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.use_panel_regr = use_panel_regr
+
     def fit(self, panel, **kwargs):
         # for the regression we need directly the data frame
         dy = panel.to_frame(index=False, labels=False) if isinstance(panel, Panel) else panel
 
         # do the regression and get the treatment effect with se
-        att, se = did_regr(dy)
+        if self.use_panel_regr:
+            att, se = did_regr_panel(dy)
+        else:
+            att, se = did_regr(dy)
+
         treated = dy.query("intervention == 1")
         observed = treated["outcome"].mean()
 

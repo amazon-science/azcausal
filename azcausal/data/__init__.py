@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from azcausal.core.panel import Panel
-from azcausal.util import to_matrices
+from azcausal.util import to_matrices, treatment_and_post_from_intervention
 
 
 class DataSet:
@@ -42,8 +42,15 @@ class DataSet:
 
 class CaliforniaProp99(DataSet):
 
-    def load(self):
-        return pd.read_csv(self.path, delimiter=';')
+    def load(self, rename=False):
+        df = pd.read_csv(self.path, delimiter=';')
+        df['post'] = (df['Year'] >= df.query("treated == 1")['Year'].min()).astype(int)
+        df['treatment'] = (df['State'].isin(df.query("treated == 1")['State'].unique())).astype(int)
+
+        if rename:
+            df = df.rename(columns=dict(Year='time', State='unit', PacksPerCapita='outcome', treated='intervention'))
+
+        return df
 
     def panel(self):
         data = self.load()
@@ -64,7 +71,7 @@ class Synthetic:
         n_units = n_treat + n_contr
         n_time = n_pre + n_post
 
-        units = np.array(["%02d" % k for k in range(1, n_units+1)])
+        units = np.array(["%02d" % k for k in range(1, n_units + 1)])
         time = np.arange(n_time) + 1900
 
         intervention = pd.DataFrame(index=time, columns=units).fillna(0).astype(int)
@@ -83,18 +90,25 @@ class Synthetic:
         return Panel(self.outcome, self.intervention)
 
 
-class Abortion(DataSet):
+class Billboard(DataSet):
 
     def load(self):
-        return pd.read_stata(self.local())
+        df = pd.read_csv(self.path)
+        df['outcome'] = df['deposits']
+        df['time'] = df['jul'].map(lambda x: 'July' if x == 1 else 'May')
+        df['unit'] = df['poa'].map(lambda x: 'Porto Alegre' if x == 1 else 'Florianopolis')
+        return (df[['time', 'unit', 'outcome']]
+                .assign(post=lambda dx: (dx['time'] == 'July'))
+                .assign(treatment=lambda dx: (dx['unit'] == 'Porto Alegre').astype(int))
+                .assign(intervention=lambda dx: dx['treatment'] & dx['post'])
+                .astype(dict(post=int, treatment=int, intervention=int))
+                )
 
     def panel(self):
-        data = self.load()
-        outcome, intervention = to_matrices(data, "Year", "State", "PacksPerCapita", "treated")
-        return Panel(outcome, intervention)
+        raise Exception("Not available for this data set.")
 
     def remote(self):
-        return "https://github.com/scunning1975/mixtape/raw/master/abortion.dta"
+        return "https://raw.githubusercontent.com/matheusfacure/python-causality-handbook/master/causal-inference-for-the-brave-and-true/data/billboard_impact.csv"
 
     def file(self):
-        return "abortion.dta"
+        return "billboard_impact.csv"

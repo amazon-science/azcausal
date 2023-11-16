@@ -22,14 +22,6 @@ def test_to_frame(data, panel):
     assert np.all(df == dx)
 
 
-
-def test_panel_apply(panel):
-
-    panel.apply()
-
-    pass
-
-
 def test_trim(panel):
     new_panel = panel.trim()
     assert panel.n_time() == new_panel.n_time()
