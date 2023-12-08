@@ -1,9 +1,9 @@
 import boto3
 from botocore.config import Config
 
+from azcausal.data import CaliforniaProp99
 from azcausal.remote.client import AWSLambda, Client
 from azcausal.remote.job import Job
-from azcausal.data import CaliforniaProp99
 from azcausal.util import parse_arn
 
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     __S3__ = "s3://azcausal-aws-lambda"
 
     config = Config(connect_timeout=300, read_timeout=300)
-    lambda_client = boto3.client('lambda', region_name=parse_arn(__ARN__).region, config=config)
+    lambda_client = boto3.client('lambda', region_name=parse_arn(__ARN__)['region'], config=config)
 
     panel = CaliforniaProp99().panel()
 

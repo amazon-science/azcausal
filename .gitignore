@@ -10,7 +10,7 @@ aws/azcausal-*
 *.parquet
 *.dta
 *.swp
-
+*.tar.gz
 
 
 

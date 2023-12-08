@@ -1,5 +1,3 @@
-import os
-import sys
 import warnings
 from collections import defaultdict
 
@@ -48,57 +46,11 @@ def ones_like(df, **kwargs):
     return full_like(df, 1, **kwargs)
 
 
-def to_matrix(df, index, cols, value, fillna=None):
-    """
-    This method takes a data frame and converts it to panel in the matrix format.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        A data frame with the observations being made.
-    index : str
-        The column that will be the index.
-    cols : str
-        The column which unique values will become the columns
-    value : str
-        The values which should be in the panel
-    fillna: object
-        If not None, NaN values in the panel will be replaced with it.
-
-    Returns
-    -------
-
-    panel : pd.DataFrame
-        A data frame summarizing the observations in a matrix format.
-
-    """
-    dff = df.set_index([index, cols]).sort_index()
-    dy = dff[value].unstack(cols)
-
-    if fillna is not None:
-        dy.fillna(fillna, inplace=True)
-
-    return dy
-
-
-def to_matrices(df, index, cols, *values, fillna=None):
-    if not isinstance(fillna, dict):
-        v = fillna
-        fillna = defaultdict(lambda: v)
-
-    return {value: to_matrix(df, index, cols, value, fillna=fillna[value]) for value in values}
-
-
 def treatment_and_post_from_intervention(df):
     return (df.assign(treatment=lambda dx: dx['unit'].isin(dx.query("intervention == 1")['unit'].unique()))
             .assign(post=lambda dx: dx['time'].isin(dx.query("intervention == 1")['time'].unique()))
             .astype(dict(treatment=int, post=int))
             )
-
-
-def to_balanced(dy):
-    p = pd.MultiIndex.from_product(dy.index.levels, names=dy.index.names)
-    return dy.reindex(p, fill_value=0)
 
 
 def time_as_int(x):
@@ -153,16 +105,6 @@ def parse_arn(arn):
     return result
 
 
-class HiddenPrints:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
-
-
 def nanmean(df, *args, **kwargs):
     if len(df) == 0:
         return np.nan
@@ -170,3 +112,31 @@ def nanmean(df, *args, **kwargs):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         return np.nanmean(df, *args, **kwargs)
+
+
+# DEPRECATED
+
+def to_matrix(*args, **kwargs):
+    return to_panel(*args, **kwargs)
+
+
+def to_matrices(df, index, cols, *targets, **kwargs):
+    return to_panels(df, index, cols, targets, **kwargs)
+
+
+def to_panel(df, index, columns, target, fillna=None):
+    dff = df.set_index([index, columns]).sort_index()
+    dy = dff[target].unstack(columns)
+
+    if fillna is not None:
+        dy.fillna(fillna, inplace=True)
+
+    return dy
+
+
+def to_panels(df, index, cols, targets, fillna=None):
+    if not isinstance(fillna, dict):
+        v = fillna
+        fillna = defaultdict(lambda: v)
+
+    return {target: to_panel(df, index, cols, target, fillna=fillna[target]) for target in targets}

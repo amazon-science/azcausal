@@ -5,10 +5,10 @@ import pytest
 from numpy.testing import assert_almost_equal
 
 from azcausal.core.error import JackKnife, Bootstrap, Placebo
-from azcausal.core.panel import Panel
-from azcausal.util import to_matrix
+from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.sdid import SDID
+from azcausal.util import to_matrices
 
 
 @pytest.fixture
@@ -27,17 +27,15 @@ def test_california_correct(sdid, data):
     result = sdid.fit(panel)
     effect = result.effect
 
-    assert_almost_equal(77.3493584873376392, effect["solvers"]["lambd"]["f"])
-    assert_almost_equal([0.3664706319364642, 0.2064530505601764, 0.4270763175033594],
-                        effect["solvers"]["lambd"]["x"][-3:])
+    assert_almost_equal(effect["solvers"]["lambd"]["f"], 77.3493584873376392)
+    assert_almost_equal(effect["solvers"]["lambd"]["x"][-3:], [0.3664706319364642, 0.2064530505601764, 0.4270763175033594])
     assert effect["solvers"]["lambd"]["iter"] == 5
 
-    assert_almost_equal(9.373915017, effect["solvers"]["omega"]["f"])
-    assert_almost_equal([0.033569113191, 0.036667084791, 0.001386441800],
-                        effect["solvers"]["omega"]["x"][-3:])
+    assert_almost_equal(effect["solvers"]["omega"]["f"], 9.373915017)
+    assert_almost_equal(effect["solvers"]["omega"]["x"][-3:], [0.033569113191, 0.036667084791, 0.001386441800])
     assert effect["solvers"]["omega"]["iter"] == 10000
 
-    assert_almost_equal(-15.6038278727338469, effect.value)
+    assert_almost_equal(effect.value, -15.6038278727338469)
 
 
 def test_jackknife_correct(sdid, data):
@@ -79,7 +77,7 @@ def from_r():
 
 
 def data_generator():
-    df = CaliforniaProp99().load()
+    df = CaliforniaProp99().df()
     units = df["State"].unique()
 
     for k in range(-1, 10):
@@ -89,9 +87,8 @@ def data_generator():
 
 @pytest.mark.parametrize("df,correct", zip(data_generator(), from_r()))
 def test_correctness_comprehensive(sdid, df, correct):
-    outcome = to_matrix(df, "Year", "State", "PacksPerCapita")
-    intervention = to_matrix(df, "Year", "State", "treated")
-    panel = Panel(outcome, intervention)
+    data = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
+    panel = CausalPanel(data=data).setup(outcome='PacksPerCapita', intervention='treated')
 
     result = sdid.fit(panel)
     effect = result.effect

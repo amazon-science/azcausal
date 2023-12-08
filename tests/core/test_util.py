@@ -8,7 +8,7 @@ from azcausal.util import time_as_int
 
 @pytest.fixture
 def df():
-    return CaliforniaProp99().load()
+    return CaliforniaProp99().df()
 
 
 def test_time_to_idx(df):

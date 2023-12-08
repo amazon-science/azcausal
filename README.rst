@@ -30,23 +30,22 @@ Usage
 
 .. code:: python
 
-    import numpy as np
-
-    from azcausal.core.error import Placebo
-    from azcausal.core.panel import Panel
-    from azcausal.core.parallelize import Pool
+    from azcausal.core.error import JackKnife
+    from azcausal.core.panel import CausalPanel
     from azcausal.data import CaliforniaProp99
     from azcausal.estimators.panel.sdid import SDID
-    from azcausal.util import to_matrices
+    from azcausal.util import to_panels
+
 
     # load an example data set with the columns Year, State, PacksPerCapita, treated.
-    df = CaliforniaProp99().load()
+    df = CaliforniaProp99().df()
 
-    # convert to matrices where the index represents each Year (time) and each column a state (unit)
-    data = to_matrices(df, "Year", "State", "PacksPerCapita", "treated")
+    # create the panel data from the frame and define the causal types
+    data = to_panels(df, 'Year', 'State', ['PacksPerCapita', 'treated'])
+    ctypes = dict(outcome='PacksPerCapita', time='Year', unit='State', intervention='treated')
 
-    # create a panel object to access observations conveniently
-    panel = Panel(outcome="PacksPerCapita", intervention="treated", data=data)
+    # initialize the panel
+    panel = CausalPanel(data).setup(**ctypes)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
     estimator = SDID()
@@ -54,16 +53,43 @@ Usage
     # run the estimator
     result = estimator.fit(panel)
 
-    # create a process pool for parallelization
-    pool = Pool(mode="thread", progress=True)
-
     # run the error validation method
-    method = Placebo(n_samples=11)
-    estimator.error(result, method, parallelize=pool)
+    estimator.error(result, JackKnife())
+
+    # plot the results
+    estimator.plot(result)
 
     # print out information about the estimate
     print(result.summary(title="CaliforniaProp99"))
 
+
+.. code:: bash
+
+    ╭──────────────────────────────────────────────────────────────────────────────╮
+    |                               CaliforniaProp99                               |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                    Panel                                     |
+    |  Time Periods: 31 (19/12)                                  total (pre/post)  |
+    |  Units: 39 (38/1)                                       total (contr/treat)  |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                     ATT                                      |
+    |  Effect (±SE): -15.60 (±2.9161)                                              |
+    |  Confidence Interval (95%): [-21.32 , -9.8884]                          (-)  |
+    |  Observed: 60.35                                                             |
+    |  Counter Factual: 75.95                                                      |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                  Percentage                                  |
+    |  Effect (±SE): -20.54 (±3.8393)                                              |
+    |  Confidence Interval (95%): [-28.07 , -13.02]                           (-)  |
+    |  Observed: 79.46                                                             |
+    |  Counter Factual: 100.00                                                     |
+    ├──────────────────────────────────────────────────────────────────────────────┤
+    |                                  Cumulative                                  |
+    |  Effect (±SE): -187.25 (±34.99)                                              |
+    |  Confidence Interval (95%): [-255.83 , -118.66]                         (-)  |
+    |  Observed: 724.20                                                            |
+    |  Counter Factual: 911.45                                                     |
+    ╰──────────────────────────────────────────────────────────────────────────────╯
 
 .. image:: docs/source/images/sdid.png
 

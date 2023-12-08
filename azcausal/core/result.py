@@ -1,4 +1,4 @@
-from azcausal.core.panel import Panel
+from azcausal.core.data import CausalData
 from azcausal.core.summary import Summary
 
 
@@ -6,8 +6,8 @@ class Result:
 
     def __init__(self,
                  effects: dict,
-                 data: dict = None,
-                 panel: Panel = None,
+                 info: dict = None,
+                 data: CausalData = None,
                  estimator=None) -> None:
         """
         A result object returned by an estimator.
@@ -16,9 +16,9 @@ class Result:
         ----------
         effects
             A dictionary of effects measured by the estimator.
-        data
+        info
             A dictionary with additional data (across effects)
-        panel
+        data
             The panel based on which the estimates are based on.
         estimator
             The estimator that has been used.
@@ -26,9 +26,8 @@ class Result:
         super().__init__()
 
         self.effects = effects
+        self.info = info
         self.data = data
-        self.panel = panel
-
         self.estimator = estimator
 
     @property
@@ -73,8 +72,8 @@ class Result:
 
         """
         sections = []
-        if hasattr(self.panel, 'summary'):
-            sections.extend(self.panel.summary(**kwargs).sections)
+        if hasattr(self.data, 'summary'):
+            sections.extend(self.data.summary(**kwargs).sections)
 
         for effect in self.effects.values():
 
@@ -84,8 +83,8 @@ class Result:
                 perc = effect.percentage()
                 sections.append(perc.summary(**kwargs))
 
-            if cumulative and effect.multiplier is not None:
-                cum = effect.cumulative(effect.multiplier)
+            if cumulative and effect.scale is not None:
+                cum = effect.cumulative(effect.scale)
                 sections.append(cum.summary(**kwargs))
 
         return Summary(sections, title=title)

@@ -14,10 +14,8 @@ if __name__ == "__main__":
 
     # Local Docker Image
     # url = "http://localhost:9000/2015-03-31/functions/function/invocations"
-
     # Remote AWS URL
     url = "https://qfvmzh26gszowwbxnbrorpyj7a0tmdsd.lambda-url.us-east-1.on.aws/"
-    # url = "https://ufkauvbiybsxhrwhsoot3hdyda0yxdlo.lambda-url.us-east-1.on.aws/"
 
     session = boto3.Session()
     credentials = session.get_credentials()

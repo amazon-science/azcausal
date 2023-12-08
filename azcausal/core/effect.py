@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import copy
+
 import numpy as np
 import pandas as pd
 import scipy
@@ -15,7 +17,7 @@ class Effect:
                  se: float = np.nan,
                  observed: float = None,
                  dof: float = 1,
-                 multiplier: float = None,
+                 scale: float = None,
                  by_time: pd.DataFrame = None,
                  by_unit: pd.DataFrame = None,
                  treatment: int = 1,
@@ -40,9 +42,9 @@ class Effect:
         dof
             The degree of freedom (can be used to calculate the confidence intervals)
 
-        multiplier
+        scale
             We usually have an overage value for the treatment effects. If we want to aggregate to cumulative
-            the multiplier is stored here.
+            the scale is stored here.
 
         by_time
             The effect over time periods.
@@ -71,7 +73,7 @@ class Effect:
         self.se = se
         self.dof = dof
         self.observed = observed
-        self.multiplier = multiplier
+        self.scale = scale
 
         self.conf = conf
         self.treatment = treatment
@@ -99,15 +101,15 @@ class Effect:
             return self.observed - self.value
 
     def cumulative(self,
-                   multiplier: float = None,
+                   scale: float = None,
                    name: str = "Cumulative") -> Effect:
         """
         This method the cumulative effect given an average.
 
         Parameters
         ----------
-        multiplier
-            The multiplier can be overwritten otherwise the one set by the estimator is used.
+        scale
+            The scale can be overwritten otherwise the one set by the estimator is used.
 
         name
             The name of the new effect.
@@ -118,18 +120,26 @@ class Effect:
             The effect having the cumulative as value.
 
         """
-        if multiplier is None:
-            multiplier = self.multiplier
+        if scale is None:
+            scale = self.scale
 
-        assert multiplier is not None, "To get the cumulative effect a multiplier is needed."
+        assert scale is not None, "To get the cumulative effect a scale is needed."
 
-        return self.multiply(multiplier, name=name)
+        return self.multiply(scale, name=name)
+
+    def relative(self,
+                 counter_factual=None,
+                 name="Relative"):
+        if counter_factual is None:
+            counter_factual = self.counter_factual
+        assert counter_factual is not None, "To get the percentage effect counter factual is needed."
+        return self.multiply(1 / np.abs(counter_factual), name=name)
 
     def percentage(self,
                    counter_factual=None,
                    name="Percentage"):
         """
-        This method returns the effect based on a percentage.
+        This method returns the effect based on relative impact.
 
         Parameters
         ----------
@@ -145,13 +155,8 @@ class Effect:
             The effect having the percentage as value.
 
         """
-
-        if counter_factual is None:
-            counter_factual = self.counter_factual
-
-        assert counter_factual is not None, "To get the percentage effect counter factual is needed."
-
-        return self.multiply(100 / np.abs(counter_factual), name=name)
+        rel_effect = self.relative(counter_factual=counter_factual)
+        return rel_effect.multiply(100, name=name)
 
     def multiply(self, s: float, name=None):
         """
@@ -190,20 +195,27 @@ class Effect:
             Returns a tuple (lower, upper) representing the confidence intervals
 
         """
-        if self.value is not None and self.se is not None:
-            if conf is None:
-                conf = self.conf
+        value, se, dof = self.value, self.se, self.dof
+        if conf is None:
+            conf = self.conf
 
-            if stat_test == 'z':
-                ci = scipy.stats.norm.interval(conf / 100, loc=self.value, scale=self.se)
+        if value is not None and se is not None:
 
-            elif stat_test == 't':
-                assert self.dof is not None, "The t-test needs to degrees of freedom."
-                ci = scipy.stats.t.interval(conf / 100, self.dof, loc=self.value, scale=self.se)
+            if np.allclose(se, 0.0):
+                return value, value
+
             else:
-                raise Exception("Use either z or t test for the confidence interval.")
 
-            return ci
+                if stat_test == 'z':
+                    ci = scipy.stats.norm.interval(conf / 100, loc=value, scale=se)
+
+                elif stat_test == 't':
+                    assert dof is not None, "The t-test needs to degrees of freedom."
+                    ci = scipy.stats.t.interval(conf / 100, dof, loc=value, scale=se)
+                else:
+                    raise Exception("Use either z or t test for the confidence interval.")
+
+                return ci
 
     def sign(self, conf: float = None, no_effect: str = '+/-'):
         """
@@ -238,6 +250,31 @@ class Effect:
                 return '+'
             else:
                 return no_effect
+
+    def copy(self, **kwargs):
+        obj = copy(self)
+        for k, v in kwargs.items():
+            setattr(obj, k, v)
+        return obj
+
+    def to_dict(self, prefix='', conf=None):
+
+        if conf is None:
+            conf = self.conf
+
+        vals = [('avg', self),
+                ('rel', self.relative()),
+                ('perc', self.percentage()),
+                ('cum', self.cumulative()),
+                ]
+
+        entry = dict(effect=self, sign=self.sign(conf=conf))
+
+        for name, effect in vals:
+            entry[f"{name}_te"] = effect.value
+            entry[f"{name}_ci_lb"], entry[f"{name}_ci_ub"] = effect.ci(conf=conf)
+
+        return {f"{prefix}{k}": v for k, v in entry.items()}
 
     def summary(self, title: str = None, conf: float = None, **kwargs):
         """
@@ -297,3 +334,11 @@ class Effect:
             return self.data[key]
         else:
             raise Exception(f"Key {key} not found.")
+
+
+def get_true_effect(cdf):
+    scale = cdf.n_interventions()
+    observed = cdf.observed()
+    att = cdf['te'].values.sum() / scale
+    se = 0.0
+    return Effect(att, se=se, observed=observed, scale=scale)

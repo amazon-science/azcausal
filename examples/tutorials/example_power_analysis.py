@@ -1,46 +1,39 @@
-import boto3
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from botocore.config import Config
+from numpy.random import RandomState
 
+from azcausal.core.panel import CausalPanel
+from azcausal.core.effect import get_true_effect
+from azcausal.core.error import JackKnife
 from azcausal.core.parallelize import Joblib
-from azcausal.remote.client import AWSLambda, Client
-from azcausal.util import parse_arn
+from azcausal.data import CaliforniaProp99
+from azcausal.estimators.panel.did import DID
+from azcausal.util import zeros_like
 from azcausal.util.analysis import f_power
 
 if __name__ == "__main__":
-    arn = "arn:aws:lambda:us-east-1:112353327285:function:azcausal-lambda-run:$LATEST"
+    # get a causal data frame where no units are treated
+    panel = CaliforniaProp99().panel().filter(contr=True)
 
-    config = Config(connect_timeout=300, read_timeout=300)
-    lambda_client = boto3.client('lambda', region_name=parse_arn(arn)['region'], config=config)
-
-    endpoint = AWSLambda(lambda_client, arn)
-    client = Client(endpoint)
+    # the number of samples used for measuring power
+    n_samples = 100
 
     class Function:
 
-        def __init__(self, att, seed) -> None:
+        def __init__(self, panel, att, seed) -> None:
             super().__init__()
+            self.panel = panel
             self.att = att
             self.seed = seed
 
         def __call__(self, *args, **kwargs):
-            from azcausal.data import CaliforniaProp99
-            from numpy.random import RandomState
-            from azcausal.core.effect import get_true_effect
-            from azcausal.core.error import JackKnife
-            from azcausal.core.panel import CausalPanel
-            from azcausal.util import zeros_like
-            from azcausal.estimators.panel.sdid import SDID
-            import numpy as np
-
             # parameters
             seed = self.seed
             att = self.att
 
             # constants
-            panel = CaliforniaProp99(cache=False).panel().filter(contr=True)
+            panel = self.panel
             conf = 90
             n_treat = 5
             n_post = 12
@@ -64,7 +57,7 @@ if __name__ == "__main__":
             true_effect = get_true_effect(panel)
 
             # run the estimator to get the predicted effect
-            estimator = SDID()
+            estimator = DID()
             result = estimator.fit(panel)
             estimator.error(result, JackKnife())
             pred_effect = result.effect
@@ -75,15 +68,6 @@ if __name__ == "__main__":
 
             return res
 
-
-    def f(z):
-        att, seed = z
-        function = Function(att, seed)
-        return client.send(function)
-
-
-    n_samples = 100
-
     # create all runs for this analysis (this can potentially include more dimensions as well)
     def g():
         for att in np.linspace(-30, 30, 13):
@@ -91,19 +75,20 @@ if __name__ == "__main__":
                 yield att, seed
 
     # run the simulation in parallel
-    parallelize = Joblib(n_jobs=500, prefer='threads', progress=True)
-    results = parallelize.run(g(), func=f)
+    parallelize = Joblib(prefer='processes', progress=True)
+    results = parallelize.run([Function(panel, *args) for args in g()])
 
     dx = (pd.DataFrame(results)
           .assign(true_in_ci=lambda dd: dd['true_avg_te'].between(dd['pred_avg_ci_lb'], dd['pred_avg_ci_ub']))
-          .assign(rel_te_error=lambda dd: dd['true_rel_te'] - dd['pred_rel_te'])
+          .assign(perc_te_error=lambda dd: dd['pred_perc_te'] - dd['true_perc_te'])
           )
 
-    # get the power for all different treatment effects
+    # get the power and coverage for each group now
     pw = dx.assign(sign=lambda dd: dd['pred_sign']).groupby('att').apply(f_power).sort_index().reset_index()
     coverage = dx.groupby('att')['true_in_ci'].mean()
+    error = dx.groupby('att').aggregate(mean=('perc_te_error', 'mean'), se=('perc_te_error', 'sem'))
 
-    fig, (top, bottom) = plt.subplots(2, 1, figsize=(12, 8))
+    fig, (top, middle, bottom) = plt.subplots(3, 1, figsize=(12, 8), sharex=True)
 
     fig.suptitle(f'CaliforniaProp99', fontsize=16)
 
@@ -118,12 +103,21 @@ if __name__ == "__main__":
     top.set_ylabel("Statistical Power")
     top.legend()
 
-    bottom.plot(coverage.index, coverage.values, "-o", color="black", label="coverage")
-    bottom.axhline(1.0, color="black", alpha=0.15)
-    bottom.axhline(0.0, color="black", alpha=0.15)
-    bottom.set_ylim(-0.05, 1.05)
+    middle.plot(coverage.index, coverage.values, "-o", color="black", label="coverage")
+    middle.axhline(1.0, color="black", alpha=0.15)
+    middle.axhline(0.0, color="black", alpha=0.15)
+    middle.set_ylim(-0.05, 1.05)
+    middle.set_xlabel("ATT (%)")
+    middle.set_ylabel("Coverage")
+    middle.legend()
+
+    bottom.plot(error.index, np.zeros(len(error)), color='black', alpha=0.7)
+    bottom.plot(error.index, error['mean'], '-o', color='red')
+    bottom.errorbar(error.index, error['mean'], error['se'], color='red', alpha=0.5, barsabove=True)
     bottom.set_xlabel("ATT (%)")
-    bottom.set_ylabel("Coverage")
-    bottom.legend()
+    bottom.set_ylabel("Error")
+
+    plt.tight_layout()
+    plt.show()
 
     plt.show()

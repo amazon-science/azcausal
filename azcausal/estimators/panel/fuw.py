@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from azcausal.core.panel import Panel
 from azcausal.core.effect import Effect
 from azcausal.core.error import Error
 from azcausal.core.estimator import Estimator
@@ -13,7 +14,7 @@ class FixedUnitWeightsEstimator(Estimator):
         super().__init__()
         self.weights = weights
 
-    def fit(self, panel, weights=None, **kwargs):
+    def fit(self, panel: Panel, weights=None, **kwargs):
 
         # if weights are not passed to the method, use the once defined in the class
         if weights is None:
@@ -21,7 +22,7 @@ class FixedUnitWeightsEstimator(Estimator):
 
         # if no weights exist, estimate them from pre
         if weights is None:
-            total = panel.get('outcome', pre=True).sum()
+            total = panel.filter(target='outcome', pre=True).sum()
             weights = (total / total.sum()).to_dict()
 
         # all times with at least one intervention
@@ -61,8 +62,8 @@ class FixedUnitWeightsEstimator(Estimator):
 
         data = dict(weights=weights)
 
-        effect = Effect(att, observed=observed, multiplier=panel.n_interventions(), by_time=by_time, name="ATT")
-        return Result(dict(att=effect), panel=panel, data=data, estimator=self)
+        effect = Effect(att, observed=observed, scale=panel.n_interventions(), by_time=by_time, name="ATT")
+        return Result(dict(att=effect), data=panel, info=data, estimator=self)
 
     def refit(self,
               result: Result,
@@ -72,4 +73,4 @@ class FixedUnitWeightsEstimator(Estimator):
 
         estimator = result.estimator
 
-        return lambda panel: estimator.fit(panel, weights=result.data['weights'])
+        return lambda panel: estimator.fit(panel, weights=result.info['weights'])

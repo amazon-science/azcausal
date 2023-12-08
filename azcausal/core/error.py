@@ -2,10 +2,8 @@ from abc import abstractmethod
 from typing import Callable
 
 import numpy as np
-import pandas as pd
-from numpy.random import RandomState
 
-from azcausal.core.panel import Panel
+from azcausal.core.data import CausalData
 from azcausal.core.parallelize import Serial, Parallelize
 from azcausal.core.result import Result
 
@@ -13,16 +11,14 @@ from azcausal.core.result import Result
 class Error(object):
 
     def __init__(self,
-                 random_state=None,
-                 n_samples=None) -> None:
+                 n_samples=None,
+                 **kwargs) -> None:
         """
         Generally, we want to attach confidence intervals to our estimates. One way of doing this is by re-running
         the estimate on re-sampled panel data and interpreting the resulting distribution.
 
         Parameters
         ----------
-        random_state
-            The random state used for sampling.
 
         n_samples
             The number of samples (might not apply to all methods).
@@ -32,15 +28,10 @@ class Error(object):
         super().__init__()
         self.n_samples = n_samples
 
-        if random_state is None:
-            random_state = RandomState(42)
-
-        self.random_state = random_state
-
     def run(self,
             result: Result,
             f_estimate: Callable = None,
-            panel: Panel = None,
+            data: CausalData = None,
             parallelize: Parallelize = Serial(),
             inplace: bool = True):
         """
@@ -57,8 +48,8 @@ class Error(object):
         f_estimate
             A function to estimate.
 
-        panel
-            The `Panel` data to sample from.
+        cdata
+            A causal data structure (CausalDataFrame or CausalPanel)
 
         parallelize
             A method if runs should be parallelized.
@@ -81,14 +72,14 @@ class Error(object):
             f_estimate = result.estimator.fit
 
         # the panel to be used
-        if panel is None:
-            panel = result.panel
+        if data is None:
+            data = result.data
 
         # check if the panel is valid for this specific error estimation
-        self.check(panel)
+        self.check(data)
 
         # do the runs (supports parallelization)
-        runs = parallelize(f_estimate, self.generate(panel))
+        runs = parallelize(self.generate(data), func=f_estimate)
 
         # the standard errors for each effect
         error = dict()
@@ -116,12 +107,12 @@ class Error(object):
         return error, runs
 
     # this can be overwritten by implementations. Is the panel valid for this method?
-    def check(self, panel: Panel):
+    def check(self, data: CausalData):
         return True
 
     @abstractmethod
     # a generator which returns the samples from the panel
-    def generate(self, panel: Panel):
+    def generate(self, data: CausalData):
         pass
 
     @abstractmethod
@@ -160,24 +151,11 @@ class JackKnife(Error):
         """
         super().__init__(**kwargs)
 
-    def generate(self, panel):
-        n = panel.n_units()
-
-        # usually we should use all samples as done here
-        indices = np.arange(n)
-
-        # however, if that would be too much we can also sample from it
-        if self.n_samples is not None:
-            indices = self.random_state.choice(indices, replace=False, size=self.n_samples)
-
-        # for each of the indices
-        for k in indices:
-
-            # always just delete one column in the panel
-            p = panel.iloc[:, np.delete(np.arange(n), k)]
-
-            # we need at least one treated unit for this
-            if p.n_treat > 0:
+    def generate(self, data: CausalData):
+        n = data.n_units()
+        for seed in range(n):
+            p = data.jackknife(seed=seed)
+            if p.n_treat > 0 and p.n_contr > 0:
                 yield p
 
     def se(self, values):
@@ -205,21 +183,11 @@ class Placebo(Error):
         # we need more control units as treatment units for this
         assert panel.n_contr > panel.n_treat, "The panel must have more control than treated units for Placebo."
 
-    def generate(self, panel):
-        # get the outcome and how many units should be flagged as placebo
-        outcome = panel.get("outcome", contr=True)
-        n_placebo = panel.n_treat
-
-        for _ in range(self.n_samples):
-            # randomly draw placebo units from control
-            placebo = self.random_state.choice(np.arange(panel.n_contr), size=n_placebo, replace=False)
-
-            # now create the intervention which simply randomizes the treatment given outcome
-            Wp = np.zeros_like(outcome.values)
-            Wp[:, placebo] = panel.get("intervention", treat=True, to_numpy=True)
-            intervention = pd.DataFrame(Wp, index=outcome.index, columns=outcome.columns)
-
-            yield Panel(outcome, intervention)
+    def generate(self, data: CausalData, seed=0):
+        for i in range(self.n_samples):
+            p = data.placebo(seed=seed + i)
+            if p.n_treat > 0 and p.n_contr > 0:
+                yield p
 
     def se(self, values):
         # implemented as in the synthetic difference-in-difference code in R
@@ -231,154 +199,18 @@ class Placebo(Error):
 # Bootstrap
 # ---------------------------------------------------------------------------------------------------------
 
-
-def by_axis(panel, axis):
-    if axis == 'units':
-        ww = panel.w
-        ss = lambda x: (slice(None), x)
-    elif axis == 'time':
-        ww = panel.wp
-        ss = lambda x: (x, slice(None))
-    else:
-        raise Exception("The 'axis' keyword either needs to be 'units' or 'time'.")
-
-    return len(ww), ww, ss
-
-
-def bootstrap_random(panel: Panel,
-                     n_max_retry: int,
-                     random_state: RandomState,
-                     axis='units'):
-    # get the axis relevant data
-    n, ww, ss = by_axis(panel, axis)
-
-    n_retry = 0
-    while True:
-        x = np.sort(random_state.choice(np.arange(n), size=n, replace=True))
-        p = panel.iloc[ss(x)]
-
-        # if we have at least one treatment unit we are done
-        if p.n_interventions() > 0:
-            break
-
-        # keep track of how often we resample
-        n_retry += 1
-        if n_retry >= n_max_retry:
-            break
-
-    # if after retries we have no treatment units -> then repair the sample to have exactly one
-    if p.n_interventions() == 0:
-        jj = np.where(ww)[0]
-        x[0] = random_state.choice(jj)
-        p = panel.iloc[ss(x)]
-
-    return p
-
-
-def bootstrap_stratified(panel: Panel,
-                         random_state: RandomState,
-                         axis='units'):
-    # get the axis relevant data
-    n, ww, f_select = by_axis(panel, axis)
-
-    # sample from control
-    pool = np.where(~ww)[0]
-    contr = random_state.choice(pool, size=len(pool), replace=True)
-
-    # sample from treated
-    pool = np.where(ww)[0]
-    treat = random_state.choice(pool, size=len(pool), replace=True)
-
-    # create the panel
-    x = np.sort(np.concatenate([contr, treat]))
-
-    return panel.iloc[f_select(x)]
-
-
-# see https://towardsdatascience.com/the-bayesian-bootstrap-6ca4a1d45148
-def bootstrap_bayes(panel: Panel,
-                    alpha: float,
-                    random_state: RandomState):
-    assert len(panel.W(
-        to_numpy=False).drop_duplicates()) == 2, "Bayes bootstrap does not work for staggered or mixed-interventions."
-
-    # this function samples a single unit by using a linear combination
-    def f(p, size, prefix=""):
-        s = p.n_units()
-        Y = p.Y()
-        W = p.W()
-
-        P = random_state.dirichlet(np.full(len(Y), alpha), size=size)
-        labels = [f"{prefix}{i + 1}" for i in range(s)]
-
-        outcome = pd.DataFrame((P @ Y).T, columns=labels)
-        intervention = pd.DataFrame((P @ W).T, columns=labels)
-        intervention = (intervention > 0.0).astype(int)
-
-        return outcome, intervention
-
-    treat = panel.iloc[:, panel.w]
-    treat_outcome, treat_intervention = f(treat, size=treat.n_units(), prefix="synt_treat_")
-
-    contr = panel.iloc[:, ~panel.w]
-    contr_outcome, contr_intervention = f(contr, size=contr.n_units(), prefix="synt_contr_")
-
-    outcome = pd.concat([treat_outcome, contr_outcome], axis=1)
-    intervention = pd.concat([treat_intervention, contr_intervention], axis=1)
-
-    return Panel(outcome, intervention)
-
-
 class Bootstrap(Error):
 
-    def __init__(self,
-                 n_samples=100,
-                 mode="random",
-                 n_max_retry=5,
-                 alpha=4.0,
-                 axis='units',
-                 **kwargs) -> None:
-        """
-        The `Bootstrap` method samples from the `Panel` with replacement. Different modes are supported:
-
-        - 'random': truly randomly sample from the `Panel`
-        - 'stratified': always keeps the number of control and treatment units the same as originally.
-        - 'bayes': samples units as a linear combination of units (separately for control and treatment keeping the
-                   balance as stratified)
-
-        Parameters
-        ----------
-        n_samples
-            The number of samples.
-
-        mode
-            The mode to be used: `random`, `stratified`, or `bayes`
-
-        n_max_retry
-            Number of times sampling is retried until all requirements are met (e.g. having at least one treatment unit)
-
-        alpha
-            The distribution parameter for bayes sampling. Can be ignored for other modes.
-
-        """
-        super().__init__(n_samples=n_samples, **kwargs)
+    def __init__(self, n_samples=100, **kwargs) -> None:
+        super().__init__(n_samples=n_samples)
         self.n_samples = n_samples
-        self.mode = mode
-        self.n_max_retry = n_max_retry
-        self.axis = axis
-        self.alpha = alpha
 
     def se(self, values):
         n = len(values)
         return np.sqrt((n - 1) / n) * np.std(values, ddof=1)
 
-    def generate(self, panel):
-        for _ in range(self.n_samples):
-            if self.mode == "random":
-                yield bootstrap_random(panel, self.n_max_retry, self.random_state, self.axis)
-            elif self.mode == "stratified":
-                yield bootstrap_stratified(panel, self.random_state, self.axis)
-            elif self.mode == "bayes":
-                yield bootstrap_bayes(panel, self.alpha, self.random_state)
-            else:
-                raise Exception(f"Unknown mode: {self.mode}. Available modes are `random`, `bayes`, and `stratified`.")
+    def generate(self, data: CausalData, seed=0):
+        for i in range(self.n_samples):
+            p = data.bootstrap(seed=seed + i)
+            if p.n_treat > 0 and p.n_contr > 0:
+                yield p

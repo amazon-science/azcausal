@@ -3,8 +3,9 @@ import sys
 import numpy as np
 import pandas as pd
 
+from azcausal.core.panel import Panel
+from azcausal.core.donors import NearestNeighbors
 from azcausal.core.estimator import Estimator, results_from_outcome
-from azcausal.core.nearest import NearestNeighbors
 
 try:
     import networkx as nx
@@ -91,7 +92,7 @@ class SNN(Estimator):
         self.min_value = min_value
         self.max_value = max_value
 
-    def fit(self, panel):
+    def fit(self, panel: Panel, **kwargs):
         outcome, intervention = panel.outcome, panel.intervention
 
         X = outcome.values.copy()
@@ -104,6 +105,7 @@ class SNN(Estimator):
         pred_outcome = pd.DataFrame(Xp, index=outcome.index, columns=outcome.columns)
 
         result = results_from_outcome(outcome, pred_outcome, intervention)
+        result.data = panel
         result.estimator = self
 
         return result

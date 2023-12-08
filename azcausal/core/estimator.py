@@ -7,7 +7,7 @@ from numpy.random import RandomState
 
 from azcausal.core.effect import Effect
 from azcausal.core.error import Error
-from azcausal.core.panel import Panel
+from azcausal.core.panel import CausalPanel
 from azcausal.core.parallelize import Serial, Parallelize
 from azcausal.core.result import Result
 
@@ -46,16 +46,15 @@ class Estimator(object):
         self.logger = logging.getLogger()
         self.random_state = random_state
 
-    def fit(self, panel, **kwargs) -> Result:
+    def fit(self, data : object, **kwargs) -> Result:
         """
         This method that needs to be implemented by an estimator which returns a `Result` object providing
         information about all estimates.
 
         Parameters
         ----------
-        panel
-            The input are panel data. For most estimators this will be an actual `Panel` objects for some a data
-            frame can be supported as well.
+        data
+            The data input. Can vary from estimator to estimator.
 
         Returns
         -------
@@ -179,10 +178,9 @@ def results_from_outcome(obs_outcome: pd.DataFrame,
                        )
 
             data = dict()
-            effect = Effect(value=att, observed=observed, multiplier=mask.values.sum(), se=np.nan, data=data,
+            effect = Effect(value=att, observed=observed, scale=mask.values.sum(), se=np.nan, data=data,
                             treatment=treatment, by_unit=by_unit, by_time=by_time)
 
             effects[f'T{treatment}'] = effect
 
-    panel = Panel(obs_outcome, intervention)
-    return Result(effects, panel=panel, data=dict(predicted=pred_outcome))
+    return Result(effects, info=dict(predicted=pred_outcome))

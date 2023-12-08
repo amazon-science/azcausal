@@ -91,5 +91,5 @@
 #         sns.histplot(data=data[['placebo', 'att']].unstack().reset_index(), x=0, hue='level_0', ax=ax, bins=11)
 #         plt.show()
 #
-#         effect = Effect(att, se=se, observed=Y_post_treat.mean(), multiplier=panel.n_interventions(), data=data)
+#         effect = Effect(att, se=se, observed=Y_post_treat.mean(), scale=panel.n_interventions(), data=data)
 #         return Result(dict(att=effect), panel=panel, estimator=self)

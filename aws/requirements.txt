@@ -4,3 +4,4 @@ flask
 aioboto3
 aiobotocore
 dill
+pyarrow

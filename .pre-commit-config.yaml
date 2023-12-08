@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/srstevenson/nb-clean
-    rev: "3.0.1"
+    rev: "3.1.0"
     hooks:
       - id: nb-clean
         args:

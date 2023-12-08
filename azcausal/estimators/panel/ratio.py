@@ -1,7 +1,7 @@
 from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
 from azcausal.core.result import Result
-from azcausal.estimators.panel.did import did_simple
+from azcausal.estimators.panel.did import did_equation
 
 
 class Ratio(Estimator):
@@ -31,15 +31,17 @@ class Ratio(Estimator):
         self.numerator = numerator
         self.denominator = denominator
 
-    def fit(self, panel, numerator=None, denominator=None, **kwargs):
+    def fit(self, cdf, numerator=None, denominator=None, **kwargs):
 
         # if the effect on the numerator is not provided already, run the estimator
         if numerator is None:
-            numerator = self.estimator.fit(panel.select(self.numerator), **kwargs)
+            cdx = cdf.assign(outcome=lambda dd: dd[self.numerator])
+            numerator = self.estimator.fit(cdx, **kwargs)
 
         # if the effect on the denominator is not provided already, run the estimator
         if denominator is None:
-            denominator = self.estimator.fit(panel.select(self.denominator), **kwargs)
+            cdx = cdf.assign(outcome=lambda dd: dd[self.denominator])
+            denominator = self.estimator.fit(cdx, **kwargs)
 
         # check if the did estimates are available in the estimators
         assert 'did' in numerator.effect.data, "The numerator needs to have the DID estimates to calculate the ratio."
@@ -48,18 +50,18 @@ class Ratio(Estimator):
         # calculate the ratio effect using DID
         did = did_ratio(numerator.effect['did'], denominator.effect['did'])
 
-        att = Effect(did["att"], observed=did["post_treat"], multiplier=panel.n_interventions(), data=did, name="ATT")
-        return Result(dict(att=att), panel=panel, data=dict(numerator=numerator, denominator=denominator),
-                      estimator=self)
+        att = Effect(did["att"], observed=did["post_treat"], scale=cdf.n_interventions(), data=did, name="ATT")
+        info = dict(numerator=numerator, denominator=denominator)
+        return Result(dict(att=att), info=info, data=cdf, estimator=self)
 
     def refit(self, result, **kwargs):
 
         def f(panel):
-            res = result.data['numerator']
+            res = result.info['numerator']
             estimator = res.estimator
             numerator = estimator.refit(res, **kwargs)(panel.select(self.numerator))
 
-            res = result.data['denominator']
+            res = result.info['denominator']
             estimator = res.estimator
             denominator = estimator.refit(res, **kwargs)(panel.select(self.denominator))
 
@@ -68,38 +70,10 @@ class Ratio(Estimator):
         return f
 
 
-# calculate the ratio given two effects from DID
 def did_ratio(numerator, denominator):
-
     pre_treat = numerator['pre_treat'] / denominator['pre_treat']
     pre_contr = numerator['pre_contr'] / denominator['pre_contr']
     post_treat = numerator['post_treat'] / denominator['post_treat']
     post_contr = numerator['post_contr'] / denominator['post_contr']
 
-    return did_simple(pre_contr, post_contr, pre_treat, post_treat)
-
-
-# just here for now for testing.
-# class DIDRatio(Estimator):
-#
-#     def __init__(self, numerator, denominator, did=DID(), **kwargs) -> None:
-#         super().__init__(**kwargs)
-#         self.did = did
-#         self.numerator = numerator
-#         self.denominator = denominator
-#
-#     def fit(self, panel, **kwargs):
-#         nom = panel.select(self.numerator)
-#         denom = panel.select(self.denominator)
-#
-#         pre_treat = nanmean(nom.Y(pre=True, treat=True)) / nanmean(denom.Y(pre=True, treat=True))
-#         pre_contr = nanmean(nom.Y(pre=True, contr=True)) / nanmean(denom.Y(pre=True, contr=True))
-#
-#         post_treat = nanmean(nom.Y(post=True, treat=True)) / nanmean(denom.Y(post=True, treat=True))
-#         post_contr = nanmean(nom.Y(post=True, contr=True)) / nanmean(denom.Y(post=True, contr=True))
-#
-#         did = did_simple(pre_contr, post_contr, pre_treat, post_treat)
-#
-#         data = dict()
-#         att = Effect(did["att"], observed=did["post_treat"], multiplier=panel.n_interventions(), data=data, name="ATT")
-#         return Result(dict(att=att), panel=panel, estimator=self)
+    return did_equation(pre_contr, post_contr, pre_treat, post_treat)

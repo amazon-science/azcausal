@@ -2,13 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from azcausal.core.effect import Effect
 from azcausal.core.error import JackKnife, Error
-from azcausal.core.estimator import Estimator
+from azcausal.core.panel import Panel
 from azcausal.core.result import Result
-from azcausal.core.solver import SparseSolver, FrankWolfe, func_simple_sparsify
-from azcausal.estimators.panel.did import did_from_data, did_regr
-from azcausal.util import full_like
+from azcausal.estimators.panel.did import DID
+from azcausal.util.solver import SparseSolver, FrankWolfe, func_simple_sparsify
 
 
 # this returns the default solver as proposed in the paper
@@ -18,45 +16,10 @@ def default_solver():
                         func_sparsify=func_simple_sparsify)
 
 
-def sdid_regr(panel, lambd, omega):
-    # get all the time weights including uniform ones for post experiment
-    time_weights = (full_like(panel.intervention)
-                    .apply(lambda dd: pd.Series(lambd.get(dd.name), index=dd.index), axis=1)
-                    .fillna(1 / panel.n_time(post=True))
-                    )
-
-    # create the unit weights including uniform ones for treatment units
-    ww = np.full(panel.n_units(), np.nan)
-    ww[~panel.w], ww[panel.w] = omega.values, 1 / panel.n_treat
-
-    unit_weights = (full_like(panel.intervention)
-                    .apply(lambda dd: pd.Series(ww, index=panel.columns), axis=1)
-                    )
-
-    # create the panel to be solved using regression
-    df = (panel
-          .with_targets(unit_weights=unit_weights, time_weights=time_weights)
-          .apply(lambda dd: dd.set_axis([f"Unit {i}" for i in range(len(dd.columns))], axis=1))
-          .to_frame(labels=False)
-          .assign(post=lambda dd: dd['time'].isin(dd.query("intervention == 1")['time'].unique()).astype(int))
-          .assign(treatment=lambda dd: dd['unit'].isin(dd.query("intervention == 1")['unit'].unique()).astype(int))
-          .assign(weight=lambda dd: (dd['unit_weights'] * dd['time_weights']) + 1e-128)
-          )
-
-    # do the regression to get the treatment effect
-    att, se = did_regr(df, weights=df['weight'])
-
-    n_time, n_units = panel.n_time(), panel.n_units()
-    dof = (n_time * n_units) - (n_time + n_units) - 1
-
-    return att, se, dof
-
-
-class SDID(Estimator):
+class SDID(DID):
 
     def __init__(self,
                  solver=default_solver(),
-                 regression=False,
                  **kwargs) -> None:
         """
 
@@ -73,8 +36,6 @@ class SDID(Estimator):
         solver
             A dictionary providing a solver object for the keys 'lambd' (time weights) and 'omega' (unit weights)
 
-        regression
-            Whether the SDID runs with a regression returning also estimates of the standard error directly.
 
         """
         super().__init__(**kwargs)
@@ -82,15 +43,13 @@ class SDID(Estimator):
         # if a solver is provided it use it for time and units weights at the same time
         self.solvers = dict(lambd=solver, omega=solver) if not isinstance(solver, dict) else solver
 
-        # whether the did regression should be run
-        self.regression = regression
-
-    def fit(self, panel, lambd=None, omega=None, optimize=True, regression=None):
-
-        # check whether we should get the att by using regression
-        if regression is None:
-            regression = self.regression
-
+    def fit(self,
+            panel: Panel,
+            lambd: np.ndarray = None,
+            omega: np.ndarray = None,
+            optimize: bool = True,
+            by_time: bool = True,
+            **kwargs):
         solvers = dict()
 
         # find the time weights if not provided / requested
@@ -101,105 +60,23 @@ class SDID(Estimator):
         omega, solvers["omega"] = sdid_unit_weights(panel, solver=self.solvers["omega"], omega=omega,
                                                     return_solver_result=True, optimize=optimize)
 
-        # calculate the synthetic control using the omega weights
-        control = panel.get('outcome', contr=True)
-        assert np.all(control.columns == omega.index), "Omega columns do not match the data set."
-        synth_control = pd.Series(control.values @ omega.values, index=control.index).to_frame('C')
-
-        # get the average treatment group
-        treatment = panel.get('outcome', treat=True).mean(axis=1).to_frame('T')
-
-        # calculate the data frame the DID will be based on
-        dx = (synth_control
-              .join(treatment)
-              .join(lambd.to_frame('lambd'), how='left')
-              .assign(W=lambda x: np.isnan(x['lambd']).astype(int))
-              )
-
-        # get the did estimates from the simple panel
-        did, by_time = did_from_data(dx)
-        se, dof = np.nan, None
-
-        # we can additional use the regression to get a read of the standard error
-        if regression:
-            att_regr, se, dof = sdid_regr(panel, lambd, omega)
-            assert np.allclose(did['att'], att_regr, atol=1e-5), "ERROR: Regression returned a different ATT."
-
-        data = dict(lambd=lambd, omega=omega, solvers=solvers, did=did)
-        att = Effect(did["att"], observed=did["post_treat"], se=se, dof=dof, multiplier=panel.n_interventions(),
-                     by_time=by_time, data=data, name="ATT")
-
-        return Result(dict(att=att), panel=panel, estimator=self)
+        # get the results and also store omega as well as lambd
+        result = super().fit(panel, lambd=lambd, omega=omega, by_time=by_time)
+        result.effect.data.update(dict(lambd=lambd, omega=omega, solvers=solvers))
+        return result
 
     def refit(self,
               result: Result,
               optimize: bool = True,
               error: Error = None,
-              low_memory: bool = False,
-              regression: bool = False,
+              by_time=False,
               **kwargs):
-        """
-
-
-        Parameters
-        ----------
-        result
-            The result object on which the refitting should be based on.
-
-        optimize
-            Whether the weights should be optimized or not.
-        error
-            Whether the refit is occurring during error estimation.
-        low_memory
-            Whether the result should be stored without any additional data.
-        regression
-            Whether the regression should be used even when only refitted.
-
-        Returns
-        -------
-        func
-            A callable function `f(panel)`.
-
-        """
-        if error is not None:
-
-            # always set optimize to false if we use jackknife
-            if type(error) == JackKnife:
-                optimize = False
-
-        return Refit(result, optimize=optimize, regression=regression)
-
-    def plot(self, result, title=None, CF=False, C=True, show=True):
-        return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
-
-
-# ---------------------------------------------------------------------------------------------------------
-# Refit
-# ---------------------------------------------------------------------------------------------------------
-
-
-class Refit:
-
-    def __init__(self, result, regression=False, optimize=True, low_memory=False) -> None:
-        self.f_estimate = result.estimator.fit
-
         effect = result.effect
-        self.omega = effect['omega']
-        self.lambd = effect['lambd']
+        optimize = True if type(error) != JackKnife else False
+        return lambda panel: self.fit(panel, by_time=by_time, lambd=effect['lambd'], omega=effect['omega'], optimize=optimize)
 
-        self.low_memory = low_memory
-        self.optimize = optimize
-        self.regression = regression
-
-    def __call__(self, panel):
-        result = self.f_estimate(panel, lambd=self.lambd, omega=self.omega, optimize=self.optimize,
-                                 regression=self.regression)
-
-        # only keep the effects of the result (not the data)
-        if self.low_memory:
-            result = Result(result.effects)
-
-        return result
+    def plot(self, result, title=None, CF=True, C=True, show=True):
+        return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -209,32 +86,34 @@ class Refit:
 def sdid_time_weights(panel, lambd=None, eta=1e-06, solver=default_solver(), return_solver_result=False, optimize=True):
     result = None
 
-    pre_contr = panel.get('outcome', pre=True, contr=True)
+    # look only at control
+    pre = panel.filter(contr=True)
 
     # get the starting solution if provided
     x0 = None
     if lambd is not None:
-        lambd = fix_lambd(list(pre_contr.index), lambd)
+        lambd = fix_lambd(list(panel.times(pre=True)), lambd)
         x0 = lambd.values
 
     if optimize:
         assert solver is not None, "Please provide a solver it optimize is set to true."
 
         # extract the data from the panel
-        Y_pre_contr = pre_contr.values.T
-        Y_post_contr = panel.Y(post=True, contr=True)
-        noise = np.diff(Y_pre_contr, axis=1).std(ddof=1)
+        Y_pre = pre['outcome'].values
+        Y_pre_contr = Y_pre[~panel.post]
+        Y_post_contr = Y_pre[panel.post]
+        noise = np.diff(Y_pre_contr, axis=0).std(ddof=1)
 
         # create the left and right hand side for the regression problem
-        A = Y_pre_contr
-        b = Y_post_contr.mean(axis=1)
+        A = Y_pre_contr.T
+        b = Y_post_contr.mean(axis=0)
 
         # use the solver to get the result
         result = solver(A, b, eta, noise=noise, x0=x0)
         lambd = result['x']
 
     # write the results to a data frame
-    weights = pd.Series(lambd, index=list(pre_contr.index), name='lambd')
+    weights = pd.Series(lambd, index=panel.times(pre=True), name='lambd')
 
     if return_solver_result:
         return weights, result
@@ -244,12 +123,14 @@ def sdid_time_weights(panel, lambd=None, eta=1e-06, solver=default_solver(), ret
 
 def sdid_unit_weights(panel, omega=None, solver=default_solver(), return_solver_result=False, optimize=True):
     result = None
-    pre_contr = panel.get('outcome', pre=True, contr=True)
+
+    # only look at pre-experiment data
+    pre = panel.filter(pre=True)
 
     # get the starting solution if provided
     x0 = None
     if omega is not None:
-        omega = fix_omega(list(pre_contr.columns), omega)
+        omega = fix_omega(panel.units(contr=True), omega)
         x0 = omega.values
 
     if optimize:
@@ -258,21 +139,23 @@ def sdid_unit_weights(panel, omega=None, solver=default_solver(), return_solver_
         (n_pre, n_post), (n_contr, n_treat) = panel.counts()
 
         # extract the data from the panel
-        Y_pre_contr = pre_contr.values.T
-        Y_pre_treat = panel.Y(pre=True, treat=True)
-        noise = np.diff(Y_pre_contr, axis=1).std(ddof=1)
+        Y_pre = pre['outcome'].values
+        Y_pre_contr = Y_pre[:, ~panel.treat]
+        Y_pre_treat = Y_pre[:, panel.treat]
+
+        noise = np.diff(Y_pre_contr, axis=0).std(ddof=1)
 
         # create the left and right hand side for the regression problem
         eta = (n_treat * n_post) ** (1 / 4)
-        A = Y_pre_contr.T
-        b = Y_pre_treat.mean(axis=0)
+        A = Y_pre_contr
+        b = Y_pre_treat.mean(axis=1)
 
         # use the solver to get the result
         result = solver(A, b, eta, noise=noise, x0=x0)
         omega = result['x']
 
     # write the results to a data frame
-    weights = pd.Series(omega, index=pre_contr.columns, name='omega')
+    weights = pd.Series(omega, index=panel.units(contr=True), name='omega')
 
     if return_solver_result:
         return weights, result
@@ -289,7 +172,6 @@ def fix_omega(units, omega):
     )
 
 
-
 def fix_lambd(times, lambd):
     return (pd.DataFrame(index=times)
     .join(lambd, how='left')
@@ -304,8 +186,10 @@ def fix_lambd(times, lambd):
 # ---------------------------------------------------------------------------------------------------------
 
 def sdid_plot(effect, title=None, CF=False, C=True, show=True):
-    data, lambd, omega = effect.by_time, effect["lambd"], effect["omega"]
-    start_time = data.query("W == 0").index.max()
+    by_time, lambd, omega = effect.by_time, effect["lambd"], effect["omega"]
+    data = effect.by_time.join(lambd.to_frame('lambd'), how='left')
+
+    start_time = data.query("post == 0").index.max()
 
     fig, ((top_left, top_right), (bottom_left, bottom_right)) = plt.subplots(2, 2,
                                                                              figsize=(12, 4),
@@ -345,10 +229,10 @@ def sdid_plot(effect, title=None, CF=False, C=True, show=True):
     top_left.legend()
     top_left.set_title(title)
 
-    w = data.query("W == 0")["lambd"]
+    w = data.query("post == 0")["lambd"]
     bottom_left.fill_between(w.index, 0.0, w, color="black")
 
-    w = data.query("W == 1")["lambd"]
+    w = data.query("post == 1")["lambd"]
     bottom_left.fill_between(w.index, 0.0, w, color="black")
 
     bottom_left.axvline(start_time, color="black", alpha=0.3)

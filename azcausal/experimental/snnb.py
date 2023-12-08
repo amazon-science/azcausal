@@ -19,7 +19,7 @@ from numpy import ndarray, float64
 
 from azcausal.core.effect import Effect
 from azcausal.core.estimator import Estimator
-from azcausal.core.panel import Panel
+from azcausal.core.panel import CausalPanel
 from azcausal.core.result import Result
 
 
@@ -149,10 +149,10 @@ class SNNB(Estimator):
         ite = pd.DataFrame(dict(att=nanmean(te[panel.w], axis=1)), index=panel.units(treat=True))
 
         df = pd.DataFrame(X_imputed.T, index=panel.outcome.index, columns=panel.outcome.columns)
-        imputed = Panel(df, panel.intervention)
+        imputed = CausalPanel(df, panel.intervention)
 
         by_time = pd.DataFrame({
-            "time": panel.time(),
+            "time": panel.times(),
             "C": nanmean(panel.Y(contr=True), axis=0),
             "T": nanmean(panel.Y(treat=True), axis=0),
             "CF": nanmean(imputed.Y(treat=True), axis=0),
@@ -161,9 +161,9 @@ class SNNB(Estimator):
         }).set_index("time")
 
         T = panel.outcome.values[panel.intervention == 1].mean()
-        att = Effect(att, observed=T, multiplier=panel.n_interventions(), by_time=by_time, by_unit=ite,
+        att = Effect(att, observed=T, scale=panel.n_interventions(), by_time=by_time, by_unit=ite,
                      data=dict(imputed=imputed), name="ATT")
-        return Result(dict(att=att), panel=panel, estimator=self)
+        return Result(dict(att=att), data=panel, estimator=self)
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
 
@@ -599,7 +599,7 @@ class SNNB(Estimator):
         s_feasible = True if subspace_inclusion_stat <= self.subspace_eps else False
         return ls_feasible and s_feasible
 
-    def _get_tensor(self, panel: Panel) -> ndarray:
+    def _get_tensor(self, panel: CausalPanel) -> ndarray:
 
         # populate actions dict
         outcome, intervention = panel.outcome.T, panel.intervention.T

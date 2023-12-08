@@ -11,17 +11,22 @@ from tqdm import tqdm
 # Interface
 # ---------------------------------------------------------------------------------------------------------
 
+
+def exec(f):
+    return f()
+
+
 class Parallelize(object):
 
     def __call__(self,
-                 func,
                  iterable,
+                 func=exec,
                  total=None
                  ) -> list:
-        return self.run(func, iterable)
+        return self.run(iterable, func)
 
     @abstractmethod
-    def run(self, func, iterable, total=None):
+    def run(self, iterable, func=exec, total=None):
         """
         A parallelization method to run multiple methods in parallel.
 
@@ -56,7 +61,7 @@ class Serial(Parallelize):
         super().__init__()
         self.progress = progress
 
-    def run(self, func, iterable, total=None):
+    def run(self, iterable, func=exec, total=None):
 
         if self.progress:
 
@@ -94,7 +99,7 @@ class Pool(Parallelize):
         self.pool = pool
         self.progress = progress
 
-    def run(self, func, iterable, total=None):
+    def run(self, iterable, func=exec, total=None):
         if self.progress:
 
             if total is None:
@@ -118,7 +123,7 @@ class Joblib(Parallelize):
         self.pool = Parallel(n_jobs=n_jobs, prefer=prefer, return_as="generator")
         self.progress = progress
 
-    def run(self, func, iterable, total=None):
+    def run(self, iterable, func=exec, total=None):
         if self.progress:
 
             if total is None:

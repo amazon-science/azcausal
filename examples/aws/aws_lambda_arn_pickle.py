@@ -6,9 +6,9 @@ import s3fs
 from arnparse import arnparse
 from botocore.config import Config
 
+from azcausal.data import CaliforniaProp99
 from azcausal.remote.client import AWSLambda, Client
 from azcausal.remote.serialization import Serialization
-from azcausal.data import CaliforniaProp99
 
 
 class Function:
@@ -23,15 +23,16 @@ class Function:
             payload = Serialization().forward(panel, as_str=False)
             f.write(payload)
 
-    def __call__(self):
+    def download(self):
         import s3fs
         from azcausal.remote.serialization import Serialization
-        from azcausal.estimators.panel.sdid import SDID
-
         fs = s3fs.S3FileSystem(anon=False)
         with fs.open(self.path, 'rb') as f:
-            panel = Serialization().backward(f.read(), from_str=False)
+            return Serialization().backward(f.read(), from_str=False)
 
+    def __call__(self):
+        from azcausal.estimators.panel.sdid import SDID
+        panel = self.download()
         return SDID().fit(panel)
 
 
