@@ -42,6 +42,7 @@ data = dict(
     install_requires=extras_require['core'],
     extras_require=extras_require,
     platforms='any',
+    include_package_data=True,
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
