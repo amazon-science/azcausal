@@ -32,7 +32,7 @@ class REST(Endpoint):
 
     def send(self, content):
         headers = {'Content-Type': 'application/json'}
-        resp = requests.post(self.url, json=content, auth=self.auth, headers=headers)
+        resp = requests.post(self.url, json=content, auth=self.auth, headers=headers, timeout=60)
 
         if resp.ok:
             return resp.json()
