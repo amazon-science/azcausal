@@ -1,3 +1,4 @@
+from azcausal.core.error import JackKnife
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.did import DID
@@ -19,6 +20,7 @@ if __name__ == '__main__':
 
     # run the estimator
     result = estimator.fit(panel)
+    estimator.error(result, JackKnife())
 
     # plot the results
     estimator.plot(result)

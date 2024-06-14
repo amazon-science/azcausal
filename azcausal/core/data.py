@@ -11,7 +11,7 @@ class CausalData:
 
     def __init__(self) -> None:
         super().__init__()
-        self.ctypes = None
+        self.ctypes = dict()
         self.tags = dict()
 
     @abstractmethod
