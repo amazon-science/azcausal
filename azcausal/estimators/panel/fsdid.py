@@ -8,6 +8,8 @@ from azcausal.core.estimator import Estimator
 from azcausal.core.panel import CausalPanel
 from azcausal.core.result import Result
 
+DEFAULT_SOLVERS = (cp.ECOS, cp.OSQP, cp.SCS)
+
 
 class SolverException(Exception):
 
@@ -23,7 +25,7 @@ def solve(data: pd.DataFrame,
           max_weight=None,
           eps: float = 1e-12,
           kwargs=None,
-          solvers=(cp.ECOS, cp.OSQP, cp.SCS)
+          solvers=DEFAULT_SOLVERS
           ):
     # get the default solver kwargs and add the ones passed
     kwargs = dict(kwargs) if kwargs is not None else dict()
@@ -92,7 +94,8 @@ def fast_sdid(df: pd.DataFrame,
               omega=None,
               lambd=None,
               jackknife=True,
-              by='units'
+              by='units',
+              solvers=DEFAULT_SOLVERS
               ):
     # get the counts in the data frame
     n_treat, n_contr = treat.sum(), (~treat).sum()
@@ -103,9 +106,9 @@ def fast_sdid(df: pd.DataFrame,
 
     # calculate the unit and time weights
     if omega is None:
-        omega = solve(demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4))
+        omega = solve(demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4), solvers=solvers)
     if lambd is None:
-        lambd = solve(demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06)
+        lambd = solve(demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06, solvers=solvers)
 
     if by == 'units':
 
@@ -227,9 +230,13 @@ def fast_sdid(df: pd.DataFrame,
 
 class FSDID(Estimator):
 
-    def __init__(self, fallback=False, **kwargs) -> None:
+    def __init__(self,
+                 solvers=(cp.ECOS, cp.OSQP, cp.SCS),
+                 fallback=False,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
         self.fallback = fallback
+        self.solvers = solvers
 
     def fit(self,
             panel: CausalPanel,
@@ -240,7 +247,7 @@ class FSDID(Estimator):
         df = panel['outcome']
 
         try:
-            sdid = fast_sdid(df, panel.post, panel.treat, omega=omega, lambd=lambd, jackknife=se)
+            sdid = fast_sdid(df, panel.post, panel.treat, omega=omega, lambd=lambd, jackknife=se, solvers=self.solvers)
             att = Effect(sdid['avg_te'], se=sdid['se'], observed=sdid['observed'], scale=sdid['scale'], by_time=sdid['by_time'], name="ATT")
             return Result(dict(att=att), data=panel, estimator=self)
 
