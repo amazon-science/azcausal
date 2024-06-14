@@ -4,6 +4,7 @@ azcausal: Causal Inference in Python
 Causal inference is an important component of the experiment evaluation. We highly recommend to have a look at the open-source
 book: `Causal Inference for The Brave and True <https://matheusfacure.github.io/python-causality-handbook/landing-page.html>`_
 
+Please find the software documentation here: https://amazon-science.github.io/azcausal/latest/
 
 Currently, azcausal provides two well-known and widely used causal inference methods: Difference-in-Difference (DID) and
 Synthetic Difference-in-Difference (SDID). Moreover, error estimates via Placebo, Boostrap, or JackKnife are available.
