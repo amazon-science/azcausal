@@ -227,12 +227,15 @@ def fast_sdid(df: pd.DataFrame,
 
 class FSDID(Estimator):
 
+    def __init__(self, fallback=False, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.fallback = fallback
+
     def fit(self,
             panel: CausalPanel,
             omega=None,
             lambd=None,
             se=True,
-            fallback=True,
             **kwargs):
         df = panel['outcome']
 
@@ -242,7 +245,7 @@ class FSDID(Estimator):
             return Result(dict(att=att), data=panel, estimator=self)
 
         except SolverException as e:
-            if fallback:
+            if self.fallback:
                 from azcausal.estimators.panel.sdid import SDID
                 estimator = SDID()
                 result = estimator.fit(panel, omega=omega, lambd=lambd, se=se)

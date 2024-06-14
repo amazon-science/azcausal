@@ -107,7 +107,7 @@ class CausalDataFrame(pd.DataFrame, CausalData):
 
     def pivot(self, target='outcome', index='time', columns='unit', fillna=None, sort=True) -> pd.DataFrame:
 
-        dy = self.set_index([index, columns])[target].unstack(columns, sort=False)
+        dy = self.set_index([index, columns])[target].unstack(columns)
 
         if fillna is not None:
             dy.fillna(fillna, inplace=True)
