@@ -5,3 +5,5 @@ aioboto3
 aiobotocore
 dill
 pyarrow
+cvxpy
+cvxopt

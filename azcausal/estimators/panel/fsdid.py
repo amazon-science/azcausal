@@ -1,4 +1,3 @@
-import cvxpy as cp
 import numpy as np
 import pandas as pd
 
@@ -7,96 +6,23 @@ from azcausal.core.error import JackKnife
 from azcausal.core.estimator import Estimator
 from azcausal.core.panel import CausalPanel
 from azcausal.core.result import Result
-
-DEFAULT_SOLVERS = (cp.ECOS, cp.OSQP, cp.SCS)
-
-
-class SolverException(Exception):
-
-    def __init__(self, *args, exceptions=None, **kwargs):
-        super().__init__(*args)
-        self.exceptions = exceptions
-
-
-def solve(data: pd.DataFrame,
-          contr: np.ndarray,
-          treat: np.ndarray,
-          alpha: float = None,
-          max_weight=None,
-          eps: float = 1e-12,
-          kwargs=None,
-          solvers=DEFAULT_SOLVERS
-          ):
-    # get the default solver kwargs and add the ones passed
-    kwargs = dict(kwargs) if kwargs is not None else dict()
-
-    # set defaults to kwargs
-    defaults = dict(verbose=False)
-    for k, v in defaults.items():
-        if k not in kwargs:
-            kwargs[k] = v
-
-    if 'solver' in kwargs:
-        solvers = kwargs.pop('solver')
-
-    C = data.loc[:, contr]
-    A = C.values
-    m, n = A.shape
-
-    T = data.loc[:, treat]
-    b = T.mean(axis=1).values
-
-    x = cp.Variable(n)
-
-    # OBJECTIVE
-    # x = np.ones(n) / n
-    # y = (((A @ x - b)**2).sum() / m) + ((alpha ** 2) * (x ** 2).sum())
-
-    obj = cp.sum_squares(A @ x - b) / m
-    if alpha is not None:
-        obj += (alpha ** 2) * cp.sum_squares(x)
-
-    constr = [x >= 0.0, cp.sum(x) == 1]
-    if max_weight is not None:
-        constr.append(x <= max_weight)
-
-    success = False
-    exceptions = dict()
-    for solver in solvers:
-        try:
-            problem = cp.Problem(cp.Minimize(obj), constr)
-            problem.solve(solver=solver, **kwargs)
-            success = (x.value is not None)
-        except Exception as ex:
-            exceptions[solver] = ex
-
-        if success:
-            break
-
-    if not success:
-        raise SolverException("Error: All solvers in FSDID failed to find weights.", exceptions=exceptions)
-
-    w = np.array(x.value)
-    if eps is not None:
-        w = np.where(w >= eps, w, 0.0)
-        w /= w.sum()
-
-    return pd.Series(data=w, index=C.columns)
+from azcausal.solvers import solve
+from azcausal.solvers.solve_exception import SolverException
 
 
 def demean(x, axis=0):
     return x - x.mean(axis=axis)
 
 
-def fast_sdid(df: pd.DataFrame,
-              post: np.ndarray,
-              treat: np.ndarray,
-              omega=None,
-              lambd=None,
-              jackknife=True,
-              by='units',
-              solvers=DEFAULT_SOLVERS
-              ):
+def fsdid(df: pd.DataFrame,
+          post: np.ndarray,
+          treat: np.ndarray,
+          omega=None,
+          lambd=None,
+          jackknife=True,
+          by='units',
+          solver='scipy',
+          ):
     # get the counts in the data frame
     n_treat, n_contr = treat.sum(), (~treat).sum()
     n_post, n_pre = post.sum(), (~post).sum()
@@ -105,10 +31,10 @@ def fast_sdid(df: pd.DataFrame,
     noise = np.diff(df.loc[~post, ~treat], axis=0).std(ddof=1)
 
     # calculate the unit and time weights
-    if omega is None:
-        omega = solve(demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4), solvers=solvers)
     if lambd is None:
-        lambd = solve(demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06, solvers=solvers)
+        lambd = solve(solver, demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06)
+    if omega is None:
+        omega = solve(solver, demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4))
 
     if by == 'units':
 
@@ -231,12 +157,12 @@ def fast_sdid(df: pd.DataFrame,
 class FSDID(Estimator):
 
     def __init__(self,
-                 solvers=(cp.ECOS, cp.OSQP, cp.SCS),
+                 solver='quad',
                  fallback=False,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         self.fallback = fallback
-        self.solvers = solvers
+        self.solver = solver
 
     def fit(self,
             panel: CausalPanel,
@@ -247,12 +173,13 @@ class FSDID(Estimator):
         df = panel['outcome']
 
         try:
-            sdid = fast_sdid(df, panel.post, panel.treat, omega=omega, lambd=lambd, jackknife=se, solvers=self.solvers)
+            sdid = fsdid(df, panel.post, panel.treat, omega=omega, lambd=lambd, jackknife=se, solver=self.solver)
             att = Effect(sdid['avg_te'], se=sdid['se'], observed=sdid['observed'], scale=sdid['scale'], by_time=sdid['by_time'], name="ATT")
             return Result(dict(att=att), data=panel, estimator=self)
 
         except SolverException as e:
             if self.fallback:
+                print("FSDID failed. Running regular SDID.")
                 from azcausal.estimators.panel.sdid import SDID
                 estimator = SDID()
                 result = estimator.fit(panel, omega=omega, lambd=lambd, se=se)
