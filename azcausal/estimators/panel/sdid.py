@@ -5,7 +5,7 @@ import pandas as pd
 from azcausal.core.error import JackKnife, Error
 from azcausal.core.panel import Panel
 from azcausal.core.result import Result
-from azcausal.estimators.panel.did import DID
+from azcausal.estimators.panel.did import DID, fix_omega, fix_lambd
 from azcausal.util.solver import SparseSolver, FrankWolfe, func_simple_sparsify
 
 
@@ -61,7 +61,7 @@ class SDID(DID):
                                                     return_solver_result=True, optimize=optimize)
 
         # get the results and also store omega as well as lambd
-        result = super().fit(panel, lambd=lambd, omega=omega, by_time=by_time)
+        result = super().fit(panel, lambd=lambd, omega=omega, fix_weights=False, by_time=by_time)
         result.effect.data.update(dict(lambd=lambd, omega=omega, solvers=solvers))
         return result
 
@@ -161,24 +161,6 @@ def sdid_unit_weights(panel, omega=None, solver=default_solver(), return_solver_
         return weights, result
     else:
         return weights
-
-
-def fix_omega(units, omega):
-    return (pd.DataFrame(index=units)
-    .join(omega)
-    .fillna(0.0)
-    .apply(lambda x: x / x.sum() if x.sum() > 0 else 1 / len(units))
-    ['omega']
-    )
-
-
-def fix_lambd(times, lambd):
-    return (pd.DataFrame(index=times)
-    .join(lambd, how='left')
-    .fillna(0.0)
-    .apply(lambda x: (x / x.sum()) * lambd.sum() if x.sum() > 0 else 1 / len(times))
-    ['lambd']
-    )
 
 
 # ---------------------------------------------------------------------------------------------------------

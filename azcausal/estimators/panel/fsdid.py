@@ -21,7 +21,7 @@ def fsdid(df: pd.DataFrame,
           lambd=None,
           jackknife=True,
           by='units',
-          solver='scipy',
+          solver='quad',
           ):
     # get the counts in the data frame
     n_treat, n_contr = treat.sum(), (~treat).sum()
@@ -32,9 +32,9 @@ def fsdid(df: pd.DataFrame,
 
     # calculate the unit and time weights
     if lambd is None:
-        lambd = solve(solver, demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06)
+        lambd = solve(solver, demean(df.T.loc[~treat]), ~post, post, alpha=noise * 1e-06, tol=noise * 1e-5)
     if omega is None:
-        omega = solve(solver, demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4))
+        omega = solve(solver, demean(df.loc[~post]), ~treat, treat, alpha=noise * (n_treat * n_post) ** (1 / 4), tol=noise * 1e-5)
 
     if by == 'units':
 
@@ -140,7 +140,7 @@ def fsdid(df: pd.DataFrame,
             se = np.sqrt(((n - 1) / n) * (n - 1) * np.var(jk, ddof=1))
 
     else:
-        raise Exception("Esimate effects either by time or units as the first dimension.")
+        raise Exception("Estimate effects either by time or units as the first dimension.")
 
     # calculate the observed values and the scale to calculate the cumulative effect
     scale = post.sum() * treat.sum()

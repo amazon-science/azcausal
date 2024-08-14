@@ -43,7 +43,8 @@ def solve_quad(data: pd.DataFrame,
 
     # weights greater than zero constraints
     G = -1 * np.identity(n)
-    h = np.zeros(n)
+    # h = np.zeros(n)
+    h = (1/1000) * (1/n) * np.ones(n)
 
     # weight's sum equals one constraint
     A = np.ones((1, n))

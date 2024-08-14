@@ -38,11 +38,17 @@ class DID(Estimator):
             panel: CausalPanel,
             lambd: np.ndarray = None,
             omega: np.ndarray = None,
+            fix_weights=True,
             by_time: bool = True,
             **kwargs):
 
+        if fix_weights and lambd is not None:
+            lambd = fix_lambd(list(panel.times(pre=True)), lambd)
+        if fix_weights and omega is not None:
+            omega = fix_omega(panel.units(contr=True), omega)
+
         Y = panel['outcome'].values
-        control = Y[:, ~panel.treat].mean(axis=1) if omega is None else Y[:, ~panel.treat] @ omega
+        control = Y[:, ~panel.treat].mean(axis=1) if omega is None else Y[:, ~panel.treat] @ omega.values
         treatment = Y[:, panel.treat].mean(axis=1)
 
         # feed in the already time
@@ -58,13 +64,14 @@ class DID(Estimator):
                        .assign(CF=lambda x: x['T'] - x['att'].fillna(0.0))
                        )
 
-        info = dict(did=did)
+        info = dict(did=did, omega=omega, lambd=lambd)
         scale = panel.n_interventions()
         att = Effect(did["att"], observed=did["post_treat"], scale=scale, by_time=by_time, data=info, name="ATT")
         return Result(dict(att=att), data=panel, info=info, estimator=self)
 
     def refit(self, result: Result, by_time=False, **kwargs) -> Callable:
-        return lambda cdf: self.fit(cdf, by_time=by_time)
+        effect = result.effect
+        return lambda cdf: self.fit(cdf, by_time=by_time, lambd=effect['lambd'], omega=effect['omega'])
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
         data = result.effect.by_time
@@ -91,6 +98,19 @@ class DID(Estimator):
         return fig
 
 
+def fix_omega(units, omega):
+    return (pd.DataFrame(index=units)
+    .join(omega)
+    .fillna(0.0)
+    .apply(lambda x: x / x.sum() if x.sum() > 0 else 1 / len(units))
+    ['omega']
+    )
 
 
-
+def fix_lambd(times, lambd):
+    return (pd.DataFrame(index=times)
+    .join(lambd, how='left')
+    .fillna(0.0)
+    .apply(lambda x: (x / x.sum()) * lambd.sum() if x.sum() > 0 else 1 / len(times))
+    ['lambd']
+    )

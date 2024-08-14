@@ -15,7 +15,7 @@ if __name__ == '__main__':
     panel = CausalPanel(data).setup(**ctypes)
 
     # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = FSDID()
+    estimator = FSDID(solver='grad')
 
     # run the estimator
     result = estimator.fit(panel)

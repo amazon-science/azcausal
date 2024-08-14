@@ -1,4 +1,4 @@
-from typing import Iterator, List
+from typing import Iterator, List, Callable
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,6 @@ def format_human_readable(num):
 
 
 def format_float(precision=2):
-
     def f(num):
         if num is None:
             return ""
@@ -31,6 +30,8 @@ def format_float(precision=2):
             return num
         else:
             return ('{:.' + str(precision) + 'f}').format(num)
+
+    return f
 
 
 def vdid_highlight(row):
@@ -45,6 +46,18 @@ def vdid_highlight(row):
     return [f'background-color: {color}' for _ in range(len(row))]
 
 
+def vdid_value_to_sign(dx, value, lb=0.33, ub=0.66, col='sign'):
+    def f(x):
+        if x < lb:
+            return '-'
+        elif x > ub:
+            return '+'
+        else:
+            return '+/-'
+
+    return dx.assign(**{col: dx[value].map(f)})
+
+
 def set_to_obj(obj, k, v):
     setattr(obj, k, v)
     return obj
@@ -52,9 +65,11 @@ def set_to_obj(obj, k, v):
 
 def vdid_ci(dx, conf):
     lb, ub = scipy.stats.norm.interval(conf / 100, loc=dx['te'], scale=(dx['se'] + 1e-16))
+    ppr = 1 - scipy.stats.norm.cdf(0.0, loc=dx['te'], scale=(dx['se'] + 1e-16))
     return (dx
             .assign(lb=lb, ub=ub)
             .assign(sign=lambda dx: dx.apply(vdid_sign, axis=1))
+            .assign(ppr=ppr)
             )
 
 
@@ -172,10 +187,12 @@ def vdid_sign(row):
 
 
 def vdid_ratio(dx, ratio):
-    dx = dx.unstack('target')
-    for name, (num, denom) in ratio.items():
-        dx = dx.assign(**{name: lambda dx: dx[num] / dx[denom]})
-    return dx.stack()
+    if len(ratio) > 0:
+        dx = dx.unstack('target')
+        for name, (num, denom) in ratio.items():
+            dx = dx.assign(**{name: lambda dx: dx[num] / dx[denom]})
+        dx = dx.stack()
+    return dx
 
 
 def vdid(dx: pd.DataFrame,
@@ -185,11 +202,15 @@ def vdid(dx: pd.DataFrame,
          randomize: str = None,
          ci: object = vdid_jackknife(),
          conf=95,
-         ratio=None
+         ratio=None,
+         ratio_marginal=None,
+         f: Callable = lambda dx: dx,
+         g: Callable = lambda dx: dx
          ):
     if ratio is None:
         ratio = dict()
-
+    if ratio_marginal is None:
+        ratio_marginal = dict()
     if randomize is None:
         randomize, _ = diffs[-1]
 
@@ -218,10 +239,10 @@ def vdid(dx: pd.DataFrame,
     counts[randomize] = units.map(lambda x: len(x))
 
     matrix = davg.droplevel(axis='index', level=randomize).unstack(labels[randomize]).fillna(0.0)
-    dagg = vdid_ratio(dot_by_columns(matrix, units, randomize).stack(), ratio).unstack(did)
+    dagg = f(vdid_ratio(dot_by_columns(matrix, units, randomize).stack(), ratio)).unstack(did)
 
     # calculate the differences from the aggregated data
-    dte_avg = vdid_did(dagg).to_frame('te')
+    dte_avg = g(vdid_ratio(vdid_did(dagg), ratio_marginal)).to_frame('te')
 
     # if confidence intervals should be calculated
     if ci is not None:
@@ -231,14 +252,14 @@ def vdid(dx: pd.DataFrame,
         ci_sample, ci_fit = ci
 
         # simulate based on the standard error method
-        ci_samp_dict = {sample: vdid_ratio(dot_by_columns(matrix, treatment_mod, randomize).stack(), ratio) for sample, treatment_mod in
+        ci_samp_dict = {sample: f(vdid_ratio(dot_by_columns(matrix, treatment_mod, randomize).stack(), ratio)) for sample, treatment_mod in
                         enumerate(ci_sample(units))}
 
         ci_samp = pd.DataFrame(ci_samp_dict).rename_axis('sample', axis=1).stack()
 
         # calculate the did and determine the standard error
-        ci_did = vdid_did(ci_samp.unstack(did))
-        ci_se = ci_did.reset_index(level='sample', drop=True).pipe(lambda dx: group_by_index(dx).apply(ci_fit))
+        ci_did = g(vdid_ratio(vdid_did(ci_samp.unstack(did)), ratio_marginal))
+        ci_se = ci_did.reset_index(level='sample', drop=True).pipe(lambda dx: group_by_index(dx)).apply(ci_fit)
 
         # calculate the confidence intervals
         dte_avg = vdid_ci(dte_avg.join(ci_se.to_frame('se')), conf)
