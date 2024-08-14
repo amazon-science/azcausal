@@ -95,7 +95,9 @@ def vdid_avg(dx, groups, counts=None):
     return dx, counts
 
 
-def vdid_did(dx):
+def vdid_did(dx, fillna=None):
+    if fillna is not None:
+        dx = dx.fillna(fillna)
     while isinstance(dx, pd.DataFrame):
         dx = dx[True] - dx[False]
     return dx
@@ -204,6 +206,7 @@ def vdid(dx: pd.DataFrame,
          conf=95,
          ratio=None,
          ratio_marginal=None,
+         fillna=None,
          f: Callable = lambda dx: dx,
          g: Callable = lambda dx: dx
          ):
@@ -242,7 +245,7 @@ def vdid(dx: pd.DataFrame,
     dagg = f(vdid_ratio(dot_by_columns(matrix, units, randomize).stack(), ratio)).unstack(did)
 
     # calculate the differences from the aggregated data
-    dte_avg = g(vdid_ratio(vdid_did(dagg), ratio_marginal)).to_frame('te')
+    dte_avg = g(vdid_ratio(vdid_did(dagg, fillna=fillna), ratio_marginal)).to_frame('te')
 
     # if confidence intervals should be calculated
     if ci is not None:
@@ -258,7 +261,7 @@ def vdid(dx: pd.DataFrame,
         ci_samp = pd.DataFrame(ci_samp_dict).rename_axis('sample', axis=1).stack()
 
         # calculate the did and determine the standard error
-        ci_did = g(vdid_ratio(vdid_did(ci_samp.unstack(did)), ratio_marginal))
+        ci_did = g(vdid_ratio(vdid_did(ci_samp.unstack(did), fillna=fillna), ratio_marginal))
         ci_se = ci_did.reset_index(level='sample', drop=True).pipe(lambda dx: group_by_index(dx)).apply(ci_fit)
 
         # calculate the confidence intervals
