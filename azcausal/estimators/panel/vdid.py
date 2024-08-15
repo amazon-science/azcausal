@@ -177,7 +177,7 @@ def vdid_bootstrap(n_samples=1000, seed=1):
 
 def dot_by_columns(ds, columns, name):
     counts = columns.map(len)
-    columns = columns.map(lambda x: np.array([e for e in x if e in ds]))
+    columns = columns.map(lambda x: [e for e in x if e in ds])
     return pd.DataFrame({k: np.sum(ds[v].values, axis=1) / counts[k] for k, v in columns.items()}, index=ds.index).rename_axis(name, axis=1)
 
 
@@ -286,13 +286,14 @@ def vdid(dx: pd.DataFrame,
     return dict(avg=dte_avg, cum=dte_cum, pct=dte_pct, summary=summary, counts=counts, agg=dagg, scale=scale, cf=dcf)
 
 
-def vdid_panel(dx, keys, targets, time, unit, **kwargs):
-    dte = vdid(dx, keys, targets, [('post', time), ('treatment', unit)], **kwargs)
+def vdid_panel(dx, keys, targets, time, unit, fillna=None, **kwargs):
+    dte = vdid(dx, keys, targets, [('post', time), ('treatment', unit)], fillna=fillna, **kwargs)
 
     dte['avg_agg'] = (dte['agg']
                       .rename(columns={False: 'pre', True: 'post'}, level=0)
                       .rename(columns={False: 'contr', True: 'treat'}, level=1)
                       .pipe(lambda dx: set_to_obj(dx, 'columns', [f'{k}_{v}' for k, v in dx.columns]))
+                      .pipe(lambda dx: dx.fillna(fillna) if fillna is not None else dx)
                       .assign(delta_contr=lambda dx: dx['post_contr'] - dx['pre_contr'])
                       .assign(delta_treat=lambda dx: dx['post_treat'] - dx['pre_treat'])
                       .assign(did=lambda dx: dx['delta_treat'] - dx['delta_contr'])
