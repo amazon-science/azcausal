@@ -82,21 +82,45 @@ def group_by_index(dx):
     return dx.groupby(list(dx.index.names))
 
 
-def vdid_avg_by(dx, label, col, dim=None):
+def dot_by_columns(ds, columns, name, weight=None):
+    if weight is None:
+        weight = dict()
+    counts = columns.map(len)
+
+    avg = dict()
+    for k, v in columns.items():
+        v = [e for e in v if e in ds.columns]
+
+        if k in weight:
+            w = np.array([weight[k].get(e, 0.0) for e in v])
+            w = w / w.sum()
+            # print(w.sum())
+            avg[k] = ds[v].values @ w
+        else:
+            avg[k] = np.sum(ds[v], axis=1) / counts[k]
+
+    return pd.DataFrame(avg, index=ds.index).rename_axis(name, axis=1)
+
+
+def vdid_avg_by(dx, label, col, dim=None, weight=None):
     if dim is None:
         dim = dx.reset_index().groupby(label)[col].unique()
 
     counts = dim.map(len)
-    avg = group_by_index(dx.droplevel(col, axis='index')).sum().multiply(1 / counts, axis='index', level=label)
+    if weight is None:
+        avg = group_by_index(dx.droplevel(col, axis='index')).sum().divide(counts, axis='index', level=label)
+    else:
+        avg = dot_by_columns(dx.droplevel(label, axis='index').unstack(col), dim, label, weight=weight).stack()
+
     return avg, counts
 
 
-def vdid_avg(dx, groups, dims=None):
+def vdid_avg(dx, groups, dims=None, weights=None):
     if dims is None:
         dims = dict()
     counts = dict()
     for label, col in groups:
-        dx, counts[label] = vdid_avg_by(dx, label, col, dims.get(label))
+        dx, counts[label] = vdid_avg_by(dx, label, col, dim=dims.get(label), weight=weights.get(label, None))
     return dx, counts
 
 
@@ -175,12 +199,6 @@ def vdid_bootstrap(n_samples=1000, seed=1):
     return sample, vdid_se
 
 
-def dot_by_columns(ds, columns, name):
-    counts = columns.map(len)
-    columns = columns.map(lambda x: [e for e in x if e in ds])
-    return pd.DataFrame({k: np.sum(ds[v].values, axis=1) / counts[k] for k, v in columns.items()}, index=ds.index).rename_axis(name, axis=1)
-
-
 def vdid_sign(row):
     if row['lb'] < 0 and row['ub'] < 0:
         return '-'
@@ -210,6 +228,7 @@ def vdid(dx: pd.DataFrame,
          ratio_marginal=None,
          fillna=None,
          dims=None,
+         weights=None,
          f: Callable = lambda dx: dx,
          g: Callable = lambda dx: dx
          ):
@@ -221,6 +240,8 @@ def vdid(dx: pd.DataFrame,
         randomize, _ = diffs[-1]
     if dims is None:
         dims = defaultdict(None)
+    if weights is None:
+        weights = defaultdict(None)
 
     labels = {k: v for k, v in diffs}
     did = list(labels.keys())
@@ -238,15 +259,16 @@ def vdid(dx: pd.DataFrame,
     dx = pd.melt(dx, id_vars=index, var_name='target', value_name='value').set_index(index + ['target'])['value']
 
     # grouping along the difference list that was provided
-    davg, counts = vdid_avg(dx, [(k, v) for (k, v) in diffs if k != randomize], dims=dims)
+    davg, counts = vdid_avg(dx, [(k, v) for (k, v) in diffs if k != randomize], dims=dims, weights=weights)
 
-    units = dims.get(randomize)
+    units = dims.get(randomize, None)
     if units is None:
         units = davg.reset_index().groupby(randomize)[labels[randomize]].unique()
     counts[randomize] = units.map(lambda x: len(x))
 
     matrix = davg.droplevel(axis='index', level=randomize).unstack(labels[randomize]).fillna(0.0)
-    dagg = f(vdid_ratio(dot_by_columns(matrix, units, randomize).stack(), ratio)).unstack(did)
+    weight = weights.get(randomize, None)
+    dagg = f(vdid_ratio(dot_by_columns(matrix, units, randomize, weight=weight).stack(), ratio)).unstack(did)
 
     # calculate the differences from the aggregated data
     dte_avg = g(vdid_ratio(vdid_did(dagg, fillna=fillna), ratio_marginal)).to_frame('te')
@@ -259,8 +281,8 @@ def vdid(dx: pd.DataFrame,
         ci_sample, ci_fit = ci
 
         # simulate based on the standard error method
-        ci_samp_dict = {sample: f(vdid_ratio(dot_by_columns(matrix, treatment_mod, randomize).stack(), ratio)) for sample, treatment_mod in
-                        enumerate(ci_sample(units))}
+        ci_samp_dict = {sample: f(vdid_ratio(dot_by_columns(matrix, treatment_mod, randomize, weight=weight).stack(), ratio))
+                        for sample, treatment_mod in enumerate(ci_sample(units))}
 
         ci_samp = pd.DataFrame(ci_samp_dict).rename_axis('sample', axis=1).stack()
 

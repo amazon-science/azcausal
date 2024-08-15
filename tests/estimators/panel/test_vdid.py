@@ -1,34 +1,39 @@
+import pytest
 from numpy.testing import assert_almost_equal
 
 from azcausal.core.error import JackKnife
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.did import DID
+from azcausal.estimators.panel.sdid import SDID
 from azcausal.estimators.panel.vdid import vdid_panel
 
 california99 = CaliforniaProp99().panel()
 
 
-def test_vdid():
+@pytest.fixture
+def df():
+    return (CaliforniaProp99()
+            .df()
+            .pipe(lambda dx: dx.assign(treatment=dx['State'].isin(dx.query('treated == 1')['State'].unique())))
+            .pipe(lambda dx: dx.assign(post=dx['Year'].isin(dx.query('treated == 1')['Year'].unique())))
+            .assign(total='total')
+            )
+
+
+def test_vdid(df):
     estimator = DID()
     result = estimator.fit(california99)
     estimator.error(result, JackKnife())
     assert_almost_equal(-27.349111083614947, result.effect.value)
 
-    df = (CaliforniaProp99()
-          .df()
-          .pipe(lambda dx: dx.assign(treatment=dx['State'].isin(dx.query('treated == 1')['State'].unique())))
-          .pipe(lambda dx: dx.assign(post=dx['Year'].isin(dx.query('treated == 1')['Year'].unique())))
-          .assign(total='total')
-          )
-
     dte = vdid_panel(df, ['total'], 'PacksPerCapita', 'Year', 'State')
-    te = dte['cum'].loc['total', 'PacksPerCapita']
+    te = dte['avg'].loc['total', 'PacksPerCapita']
 
-    assert_almost_equal(te['te'], result.effect.cumulative().value)
-    assert_almost_equal(te['se'], result.effect.cumulative().se)
+    assert_almost_equal(te['te'], result.effect.value)
+    assert_almost_equal(te['se'], result.effect.se)
 
 
-def test_vdid_zero_column():
+def test_vdid_zero_column(df):
     panel = california99
     panel.data['outcome']['VOID'] = 0.0
     panel.data['intervention']['VOID'] = 0
@@ -40,21 +45,29 @@ def test_vdid_zero_column():
     result = estimator.fit(california99)
     estimator.error(result, JackKnife())
 
-    df = (CaliforniaProp99()
-          .df()
-          .pipe(lambda dx: dx.assign(treatment=dx['State'].isin(dx.query('treated == 1')['State'].unique())))
-          .pipe(lambda dx: dx.assign(post=dx['Year'].isin(dx.query('treated == 1')['Year'].unique())))
-          .assign(total='total')
-          )
-
     treatment = df.groupby('treatment')['State'].unique()
     treatment[False] = list(treatment[False]) + ['VOID']
     treatment[True] = list(treatment[True]) + ['VOID_T']
     dims = dict(treatment=treatment)
 
     dte = vdid_panel(df, ['total'], 'PacksPerCapita', 'Year', 'State', dims=dims)
-    te = dte['cum'].loc['total', 'PacksPerCapita']
+    te = dte['avg'].loc['total', 'PacksPerCapita']
 
-    assert_almost_equal(te['te'], result.effect.cumulative().value)
-    assert_almost_equal(te['se'], result.effect.cumulative().se)
+    assert_almost_equal(te['te'], result.effect.value)
+    assert_almost_equal(te['se'], result.effect.se)
 
+
+def test_vdid_with_weights(df):
+    estimator = SDID()
+    result = estimator.fit(california99)
+    estimator.error(result, JackKnife())
+
+    weights = dict(treatment={False: result.effect['omega']},
+                   post={False: result.effect['lambd']}
+                   )
+
+    dte = vdid_panel(df, ['total'], 'PacksPerCapita', 'Year', 'State', weights=weights)
+    te = dte['avg'].loc['total', 'PacksPerCapita']
+
+    assert_almost_equal(te['te'], result.effect.value)
+    assert_almost_equal(te['se'], result.effect.se)
