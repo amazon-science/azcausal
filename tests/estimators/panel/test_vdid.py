@@ -7,8 +7,10 @@ from azcausal.estimators.panel.did import DID
 from azcausal.estimators.panel.sdid import SDID
 from azcausal.estimators.panel.vdid import vdid_panel
 
-california99 = CaliforniaProp99().panel()
 
+@pytest.fixture
+def panel():
+    return CaliforniaProp99().panel()
 
 @pytest.fixture
 def df():
@@ -20,9 +22,9 @@ def df():
             )
 
 
-def test_vdid(df):
+def test_vdid(panel, df):
     estimator = DID()
-    result = estimator.fit(california99)
+    result = estimator.fit(panel)
     estimator.error(result, JackKnife())
     assert_almost_equal(-27.349111083614947, result.effect.value)
 
@@ -33,8 +35,24 @@ def test_vdid(df):
     assert_almost_equal(te['se'], result.effect.se)
 
 
-def test_vdid_zero_column(df):
-    panel = california99
+
+def test_vdid_with_weights(panel, df):
+    estimator = SDID()
+    result = estimator.fit(panel)
+    estimator.error(result, JackKnife())
+
+    weights = dict(treatment={False: result.effect['omega']},
+                   post={False: result.effect['lambd']}
+                   )
+
+    dte = vdid_panel(df, ['total'], 'PacksPerCapita', 'Year', 'State', weights=weights)
+    te = dte['avg'].loc['total', 'PacksPerCapita']
+
+    assert_almost_equal(te['te'], result.effect.value)
+    assert_almost_equal(te['se'], result.effect.se)
+
+
+def test_vdid_zero_column(panel, df):
     panel.data['outcome']['VOID'] = 0.0
     panel.data['intervention']['VOID'] = 0
 
@@ -42,7 +60,7 @@ def test_vdid_zero_column(df):
     panel.data['intervention']['VOID_T'] = panel.data['intervention']['California']
 
     estimator = DID()
-    result = estimator.fit(california99)
+    result = estimator.fit(panel)
     estimator.error(result, JackKnife())
 
     treatment = df.groupby('treatment')['State'].unique()
@@ -56,18 +74,3 @@ def test_vdid_zero_column(df):
     assert_almost_equal(te['te'], result.effect.value)
     assert_almost_equal(te['se'], result.effect.se)
 
-
-def test_vdid_with_weights(df):
-    estimator = SDID()
-    result = estimator.fit(california99)
-    estimator.error(result, JackKnife())
-
-    weights = dict(treatment={False: result.effect['omega']},
-                   post={False: result.effect['lambd']}
-                   )
-
-    dte = vdid_panel(df, ['total'], 'PacksPerCapita', 'Year', 'State', weights=weights)
-    te = dte['avg'].loc['total', 'PacksPerCapita']
-
-    assert_almost_equal(te['te'], result.effect.value)
-    assert_almost_equal(te['se'], result.effect.se)

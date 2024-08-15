@@ -93,8 +93,8 @@ def dot_by_columns(ds, columns, name, weight=None):
 
         if k in weight:
             w = np.array([weight[k].get(e, 0.0) for e in v])
-            w = w / w.sum()
-            # print(w.sum())
+            w = (w / np.abs(w).sum()) * np.abs(weight[k]).sum()
+
             avg[k] = ds[v].values @ w
         else:
             avg[k] = np.sum(ds[v], axis=1) / counts[k]
