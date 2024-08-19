@@ -137,16 +137,20 @@ def vdid_take_by_column(dx, col):
 
 
 def vdid_fix_weights(treatment, weights):
-    ans = dict()
-    for k, x in treatment.items():
-        weight = weights.get(k, None)
+    if weights is None:
+        return weights
+    else:
+        ans = dict()
+        for k, x in treatment.items():
+            weight = weights.get(k, None)
 
-        if weight is not None:
-            x = list(set(x))
-            weight = weight.loc[x]
-            ans[k] = weight / weight.sum()
+            if weight is not None:
+                # TODO: WRONG for boostrap
+                x = list(set(x))
+                weight = weight.loc[x]
+                ans[k] = weight / weight.sum()
 
-    return pd.Series(ans)
+        return pd.Series(ans)
 
 
 def vdid_jackknife():
