@@ -122,18 +122,30 @@ def vdid_avg(dx, groups, dims=None, weights=None):
     return dx, counts
 
 
+def vdid_along_column_axis(dx, f):
+    while isinstance(dx, pd.DataFrame):
+        cols = dx.columns.get_level_values(0)
+        dx = f(dx, cols, cols.min())
+    return dx
+
+
 def vdid_did(dx, fillna=None):
     if fillna is not None:
         dx = dx.fillna(fillna)
-    while isinstance(dx, pd.DataFrame):
-        dx = dx[True] - dx[False]
-    return dx
+
+    def f(dx, cols, base):
+        mask = np.array([col != base for col in cols])
+        return dx.loc[:, mask].stack(level=0, future_stack=True) - dx[base]
+
+    return vdid_along_column_axis(dx, f)
 
 
-def vdid_take_by_column(dx, col):
-    while isinstance(dx, pd.DataFrame):
-        dx = dx[col]
-    return dx
+def vdid_did_treated(dx):
+    def f(dx, cols, base):
+        mask = np.array([col != base for col in cols])
+        return dx.loc[:, mask].stack(level=0, future_stack=True)
+
+    return vdid_along_column_axis(dx, f)
 
 
 def vdid_fix_weights(treatment, weights):
@@ -271,8 +283,8 @@ def vdid(dx: pd.DataFrame,
     for e in index:
         if e not in dx.columns:
             assert f"Column {e} is missing in the provided data frame."
-    for e in did:
-        assert dx[e].dtype == bool, f"All DiD columns need to be of type bool, but {e} is not."
+    # for e in did:
+    #     assert dx[e].dtype == bool, f"All DiD columns need to be of type bool, but {e} is not."
 
     dx = dx.groupby(index, as_index=False)[targets].sum()
     dx = pd.melt(dx, id_vars=index, var_name='target', value_name='value').set_index(index + ['target'])['value']
@@ -313,35 +325,42 @@ def vdid(dx: pd.DataFrame,
         dte_avg = vdid_ci(dte_avg.join(ci_se.to_frame('se')), conf)
 
     # cumulative treatment effect
-    scale = np.prod([count[True] for _, count in counts.items()])
-    dte_cum = vdid_ci(dte_avg[['te', 'se']] * scale, conf)
+    dte_cum = dte_avg[['te', 'se']]
+    for label in did:
+        dte_cum = dte_cum.multiply(counts[label], level=label, axis='index')
+        if len(set(dte_cum.index.get_level_values(label))) == 1:
+            dte_avg = dte_avg.droplevel(label, axis='index')
+            dte_cum = dte_cum.droplevel(label, axis='index')
+    dte_cum = vdid_ci(dte_cum, conf)
 
     # percentage treatment effect
-    dtreat = vdid_take_by_column(dagg, True)
+    dtreat = vdid_did_treated(dagg)
     dcf = (dte_avg['te'] - dtreat).abs()
     dte_pct = vdid_ci(dte_avg[['te', 'se']].div(dcf.abs() / 100, axis='index'), conf)
 
     # data frame with all effects in once (avg, pct, cum)
     summary = pd.concat([dte_avg.assign(mode='avg'), dte_pct.assign(mode='pct'), dte_cum.assign(mode='cum')]).sort_index()
 
-    return dict(avg=dte_avg, cum=dte_cum, pct=dte_pct, summary=summary, counts=counts, agg=dagg, scale=scale, cf=dcf)
+    return dict(avg=dte_avg, cum=dte_cum, pct=dte_pct, summary=summary, counts=counts, agg=dagg, cf=dcf)
 
 
 def vdid_panel(dx, keys, targets, time, unit, fillna=None, **kwargs):
     dte = vdid(dx, keys, targets, [('post', time), ('treatment', unit)], fillna=fillna, **kwargs)
 
-    dte['avg_agg'] = (dte['agg']
-                      .rename(columns={False: 'pre', True: 'post'}, level=0)
-                      .rename(columns={False: 'contr', True: 'treat'}, level=1)
-                      .pipe(lambda dx: set_to_obj(dx, 'columns', [f'{k}_{v}' for k, v in dx.columns]))
-                      .pipe(lambda dx: dx.fillna(fillna) if fillna is not None else dx)
-                      .assign(delta_contr=lambda dx: dx['post_contr'] - dx['pre_contr'])
-                      .assign(delta_treat=lambda dx: dx['post_treat'] - dx['pre_treat'])
-                      .assign(did=lambda dx: dx['delta_treat'] - dx['delta_contr'])
-                      )
+    if np.all([np.array(level).dtype == bool for level in dte['agg'].columns.levels]):
 
-    dte['cum_agg'] = dte['avg_agg'] * dte['scale']
-    dte['pct_agg'] = dte['avg_agg'].div(dte['cf'].abs() / 100, axis='index')
+        dte['avg_agg'] = (dte['agg']
+                          .rename(columns={False: 'pre', True: 'post'}, level=0)
+                          .rename(columns={False: 'contr', True: 'treat'}, level=1)
+                          .pipe(lambda dx: set_to_obj(dx, 'columns', [f'{k}_{v}' for k, v in dx.columns]))
+                          .pipe(lambda dx: dx.fillna(fillna) if fillna is not None else dx)
+                          .assign(delta_contr=lambda dx: dx['post_contr'] - dx['pre_contr'])
+                          .assign(delta_treat=lambda dx: dx['post_treat'] - dx['pre_treat'])
+                          .assign(did=lambda dx: dx['delta_treat'] - dx['delta_contr'])
+                          )
+
+        dte['cum_agg'] = dte['avg_agg'] * dte['scale']
+        dte['pct_agg'] = dte['avg_agg'].div(dte['cf'].abs() / 100, axis='index')
 
     return dte
 

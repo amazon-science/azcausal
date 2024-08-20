@@ -7,10 +7,13 @@ from azcausal.estimators.panel.did import DID
 from azcausal.estimators.panel.sdid import SDID
 from azcausal.estimators.panel.vdid import vdid_panel
 
+import numpy as np
+
 
 @pytest.fixture
 def panel():
     return CaliforniaProp99().panel()
+
 
 @pytest.fixture
 def df():
@@ -33,7 +36,6 @@ def test_vdid(panel, df):
 
     assert_almost_equal(te['te'], result.effect.value)
     assert_almost_equal(te['se'], result.effect.se)
-
 
 
 def test_vdid_with_weights(panel, df):
@@ -73,4 +75,15 @@ def test_vdid_zero_column(panel, df):
 
     assert_almost_equal(te['te'], result.effect.value)
     assert_almost_equal(te['se'], result.effect.se)
+
+
+def test_vdid_over_time(panel, df):
+    estimator = DID()
+    result = estimator.fit(panel)
+
+    dx = df.assign(post=lambda dx: np.where(dx['post'], dx['Year'], dx['post']))
+
+    dte = vdid_panel(dx, ['total'], 'PacksPerCapita', 'Year', 'State')
+    assert_almost_equal(result.effect.value, dte['avg']['te'].mean())
+    assert_almost_equal(result.effect.cumulative().value, dte['cum']['te'].sum())
 
