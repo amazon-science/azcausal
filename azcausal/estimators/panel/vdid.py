@@ -167,19 +167,13 @@ def vdid_fix_weights(treatment, weights):
 
 def vdid_jackknife():
     def sample(treatment: pd.Series, weights: pd.Series) -> Iterator[pd.Series]:
-        treat, contr = treatment[True], treatment[False]
 
-        if len(contr) > 1:
-            for i in range(len(contr)):
-                treatment_mod = pd.Series({True: treat, False: np.delete(contr, i)})
-                weight_mod = vdid_fix_weights(treatment_mod, weights)
-                yield treatment_mod, weight_mod
-
-        if len(treat) > 1:
-            for i in range(len(treat)):
-                treatment_mod = pd.Series({True: np.delete(treat, i), False: contr})
-                weight_mod = vdid_fix_weights(treatment_mod, weights)
-                yield treatment_mod, weight_mod
+        for name, units in treatment.items():
+            if len(units) > 1:
+                for i in range(len(units)):
+                    treatment_mod = pd.Series({k: v if name != k else np.delete(units, i) for k, v in treatment.items()})
+                    weight_mod = vdid_fix_weights(treatment_mod, weights)
+                    yield treatment_mod, weight_mod
 
     def fit(dse: pd.DataFrame):
         n = len(dse)
