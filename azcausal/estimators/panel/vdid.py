@@ -352,10 +352,9 @@ def vdid_panel(dx, keys, targets, time, unit, fillna=None, **kwargs):
                           .assign(delta_treat=lambda dx: dx['post_treat'] - dx['pre_treat'])
                           .assign(did=lambda dx: dx['delta_treat'] - dx['delta_contr'])
                           )
-        if 'scale' in dte:
-            dte['cum_agg'] = dte['avg_agg'] * dte['scale']
-        if 'cf' in dte:
-            dte['pct_agg'] = dte['avg_agg'].div(dte['cf'].abs() / 100, axis='index')
+        scale = np.prod([e[True] if True in e else 1 for _, e in dte['counts'].items()])
+        dte['cum_agg'] = dte['avg_agg'] * scale
+        dte['pct_agg'] = dte['avg_agg'].div(dte['cf'].abs() / 100, axis='index')
 
     return dte
 
