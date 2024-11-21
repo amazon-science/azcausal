@@ -90,6 +90,7 @@ class Estimator(object):
               method: Error,
               parallelize: Parallelize = Serial(),
               inplace: bool = True,
+              low_memory: bool = True,
               **kwargs):
         """
         This is a convenience method which calculate the error given a result.
@@ -98,7 +99,7 @@ class Estimator(object):
         Parameters
         ----------
         result
-            The originally result object with estimates.
+            The original result object with estimates.
 
         method
             The error method to be used.
@@ -108,6 +109,9 @@ class Estimator(object):
 
         inplace
             Directly overwrite the error in the result object to the new one.
+
+        low_memory
+            Low memory consumption when running the estimator
 
         Returns
         -------
@@ -119,7 +123,7 @@ class Estimator(object):
         f_estimate = self.refit(result, error=method, **kwargs)
 
         # return whatever is returned by the error estimation
-        return method.run(result, f_estimate=f_estimate, parallelize=parallelize, inplace=inplace)
+        return method.run(result, f_estimate=f_estimate, parallelize=parallelize, inplace=inplace, low_memory=low_memory)
 
 
 def results_from_outcome(obs_outcome: pd.DataFrame,

@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+import psutil
 
 
 def argmax(a, mode="first"):
@@ -140,3 +141,10 @@ def to_panels(df, index, cols, targets, fillna=None):
         fillna = defaultdict(lambda: v)
 
     return {target: to_panel(df, index, cols, target, fillna=fillna[target]) for target in targets}
+
+
+def print_memory_usage(message=''):
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    memory_usage_mb = memory_info.rss / 1024 / 1024
+    print(f"{message} | Current memory usage: {memory_usage_mb:.2f} MB")

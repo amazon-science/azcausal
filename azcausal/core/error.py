@@ -33,7 +33,8 @@ class Error(object):
             f_estimate: Callable = None,
             data: CausalData = None,
             parallelize: Parallelize = Serial(),
-            inplace: bool = True):
+            inplace: bool = True,
+            low_memory: bool = True):
         """
         This method runs the error estimation given a result from an estimator. The estimate will pull all data
         from the result object (e.g. estimation function or panel), however, that could also be overwritten and
@@ -42,13 +43,14 @@ class Error(object):
 
         Parameters
         ----------
+
         result
             The `Result` object from an estimator.
 
         f_estimate
             A function to estimate.
 
-        cdata
+        data
             A causal data structure (CausalDataFrame or CausalPanel)
 
         parallelize
@@ -56,6 +58,9 @@ class Error(object):
 
         inplace
             Whether the `Result` object should be modified in-place.
+
+        low_memory
+            Low memory consumption when running the estimator
 
         Returns
         -------
@@ -67,13 +72,23 @@ class Error(object):
 
         """
 
+        # the panel to be used
+        if data is None:
+            data = result.data
+
         # the estimation function
         if f_estimate is None:
             f_estimate = result.estimator.fit
 
-        # the panel to be used
-        if data is None:
-            data = result.data
+        # use only low memory when executed
+        if low_memory:
+            g = f_estimate
+
+            def f(*args, **kwargs):
+                result = g(*args, **kwargs)
+                return Result(effects=result.effects)
+
+            f_estimate = f
 
         # check if the panel is valid for this specific error estimation
         self.check(data)
