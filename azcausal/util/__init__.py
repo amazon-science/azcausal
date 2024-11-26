@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-import psutil
+
 
 
 def argmax(a, mode="first"):
@@ -144,6 +144,7 @@ def to_panels(df, index, cols, targets, fillna=None):
 
 
 def print_memory_usage(message=''):
+    import psutil
     process = psutil.Process()
     memory_info = process.memory_info()
     memory_usage_mb = memory_info.rss / 1024 / 1024
