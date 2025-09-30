@@ -14,8 +14,32 @@ from azcausal.estimators.panel.sdid import sdid_plot
 
 
 # ---------------------------------------------------------------------------------------------------------
-# Solver
+# OPTIMIZATION
 # ---------------------------------------------------------------------------------------------------------
+
+
+class Optimization:
+
+    def __init__(self, n_max_epochs=3_000, algorithm=torch.optim.Adam):
+        super().__init__()
+        self.n_max_epochs = n_max_epochs
+        self.algorithm = algorithm
+
+    def solver(self, A, b, m, h):
+        A = torch.tensor(A, dtype=torch.float32)
+        b = torch.tensor(b, dtype=torch.float32)
+        m = torch.tensor(m, dtype=torch.bool)
+        h = torch.tensor(h, dtype=torch.bool)
+
+        At, bt = A[:, ~h], b[:, ~h]
+        Ah, bh = A[:, h], b[:, h]
+
+        n_samples, _, n_units = At.shape
+        x = torch.full((n_samples, n_units), 0.1, requires_grad=True, dtype=torch.float32)
+
+        optimizer = self.algorithm([x], lr=0.001)
+
+        return MySolver(At, bt, Ah, bh, x, m, optimizer, self.n_max_epochs)
 
 
 def predict(A, w):
@@ -35,65 +59,46 @@ def forward(A, w, b, m=None):
 
 class MySolver(object):
 
-    def __init__(self):
+    def __init__(self, At, bt, Ah, bh, x, m, optimizer, n_max_epochs):
         super().__init__()
-        self.data = []
+        self.At, self.bt = At, bt
+        self.Ah, self.bh = Ah, bh
+        self.m = m
+        self.x = x
+        self.w = None
 
-    def add(self, A, b, m, other=None, tags=None):
-        self.data.append(dict(A=A, b=b, m=m, other=other, tags=tags))
+        self.optimizer = optimizer
+        self.n_max_epochs = n_max_epochs
 
-    def run(self, holdout):
+        self.epoch = 0
+        self.total_loss = None
+        self.trn_loss = None
+        self.vld_loss = None
+        self.tst_loss = None
 
-        def f(collection, name):
-            return [x[name] for x in collection]
+    def advance(self):
+        self.w = F.softmax(self.x, dim=1)
+        trn_loss = forward(self.At, self.w, self.bt, self.m)
+        total_loss = trn_loss.mean()
 
-        A = torch.tensor(np.array(f(self.data, 'A')), dtype=torch.float32)
-        b = torch.tensor(np.array(f(self.data, 'b')), dtype=torch.float32)
-        m = torch.tensor(np.array(f(self.data, 'm')), dtype=torch.bool)
+        with torch.no_grad():
+            vld_loss = forward(self.At, self.w, self.bt, ~self.m)
+            tst_loss = forward(self.Ah, self.w, self.bh)
+            # tst_error = (bh - predict(Ah, w))
 
-        At, bt = A[:, ~holdout], b[:, ~holdout]
-        n_samples, n_times, n_units = At.shape
+        self.optimizer.zero_grad()
+        total_loss.backward()
+        self.optimizer.step()
 
-        Ah, bh = A[:, holdout], b[:, holdout]
+        self.total_loss = total_loss
+        self.trn_loss, self.vld_loss, self.tst_loss = trn_loss, vld_loss, tst_loss
 
-        x = torch.full((n_samples, n_units), 0.1, requires_grad=True, dtype=torch.float32)
-        w = F.softmax(x, dim=1)
-
-        # optimizer = torch.optim.SGD([x], lr=0.01)
-        optimizer = torch.optim.Adam([x], lr=0.001)
-        n_epochs = 3_000
-
-        trace = []
-
-        for epoch in range(n_epochs):
-            w = F.softmax(x, dim=1)
-            trn_loss = forward(At, w, bt, m)
-            total_loss = trn_loss.mean()
-
-            optimizer.zero_grad()
-            total_loss.backward()
-            optimizer.step()
-
-            if epoch % 10 == 0:
-
-                with torch.no_grad():
-                    vld_loss = forward(At, w, bt, ~m)
-                    tst_loss = forward(Ah, w, bh)
-                    tst_error = (bh - predict(Ah, w))
-
-                tst_error = tst_error.detach().numpy()
-                ww = w.detach().numpy()
-
-                for k in range(n_samples):
-                    trace.append(dict(epoch=epoch,
-                                      trn_loss=trn_loss[k].item(),
-                                      vld_loss=vld_loss[k].item(),
-                                      tst_loss=tst_loss[k].item(),
-                                      tst_error=tst_error[k],
-                                      w=ww[k],
-                                      **self.data[k]['tags']))
-
-        return w, pd.DataFrame(trace)
+    def run(self, callback: lambda x: x):
+        for _ in range(self.n_max_epochs):
+            self.advance()
+            with torch.no_grad():
+                callback(self)
+            self.epoch += 1
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -101,15 +106,15 @@ class MySolver(object):
 # ---------------------------------------------------------------------------------------------------------
 
 
-
 class MyPanel(object):
 
-    def __init__(self, Y, n_treat, n_post, tags=None):
+    def __init__(self, Y, n_treat, n_post, tags=None, Yp=None):
         super().__init__()
         self.Y = Y
+        self.Yp = Yp
         self.n_treat = n_treat
         self.n_post = n_post
-        self.tags = tags
+        self.tags = tags if tags is not None else {}
 
     def matrix_by_unit(self):
         Y = self.Y
@@ -129,7 +134,6 @@ class MyPanel(object):
         b = YY[:, self.spost].mean(axis=1)
 
         return A, b
-
 
     @property
     def n_units(self):
@@ -213,7 +217,7 @@ class MyPanel(object):
         mask[treat] = True
         return mask
 
-    def att(self, omega=None, lambd=None):
+    def predict(self, omega=None, lambd=None):
         Y = self.Y
         contr, treat, pre, post = self.slices
 
@@ -228,6 +232,12 @@ class MyPanel(object):
         att = (post_treat - pre_treat) - (post_contr - pre_contr)
         return dict(att=att, pre_treat=pre_treat, post_treat=post_treat, pre_contr=pre_contr, post_contr=post_contr)
 
+    def effect(self):
+        if self.Yp is not None:
+            Y, Yp = self.Y, self.Yp
+            te = Y[self.spost][:, self.streat] - Yp[self.spost][:, self.streat]
+            return np.mean(te)
+
 
 def create_mask(n, p, random_state):
     m = random_state.random(n) <= p
@@ -239,57 +249,59 @@ def create_mask(n, p, random_state):
 
 class Instance(MyPanel):
 
-    def __init__(self, panel, itreat=None, icontr=None, mu=None, mt=None, tags=None):
-
-
+    def __init__(self, panel, itreat=None, icontr=None, mu=None, mt=None, tags=None, Yp=None):
+        Y = panel.Y
         itreat = itreat if itreat is not None else panel.itreat
         icontr = icontr if icontr is not None else panel.icontr
 
-        Y = panel.Y
         YY = np.hstack([Y[:, icontr], Y[:, itreat]])
+        if Yp is not None:
+            Yp = np.hstack([Yp[:, icontr], Yp[:, itreat]])
 
-        super().__init__(YY, len(itreat), panel.n_post)
+        super().__init__(YY, len(itreat), panel.n_post, tags=tags, Yp=Yp)
         self.panel = panel
         self.mu = mu if mu is not None else np.full(len(icontr), True)
         self.mt = mt if mt is not None else np.full(panel.n_pre, True)
-        self.tags = tags if tags is not None else {}
 
     def matrix_by_unit(self):
         A, b = super().matrix_by_unit()
-        return A, b, self.mt
+        return dict(A=A, b=b, m=self.mt, instance=self)
 
     def matrix_by_time(self):
         A, b = super().matrix_by_time()
-        return A, b, self.mu
+        return dict(A=A, b=b, m=self.mu, instance=self)
 
 
 class InstanceFactory:
 
-
-    def __init__(self, panel, n):
+    def __init__(self, panel, n, mup=0.5, mtp=0.5):
         super().__init__()
         self.panel = panel
         self.n = n
+
+        self.mup = mup
+        self.mtp = mtp
 
     def sample(self, seed):
         panel = self.panel
         n_pre, n_post, n_treat, n_contr = panel.counts
 
         random_state = RandomState(seed)
-        mu = create_mask(n_contr, 0.5, random_state)
-        mt = create_mask(n_pre, 0.5, random_state)
+        mu = create_mask(n_contr, self.mup, random_state)
+        mt = create_mask(n_pre, self.mtp, random_state)
 
+        # the default (no sampling) with time and units masks
         default = Instance(panel, mt=mt, mu=mu, tags=dict(name='RESULT', seed=seed))
 
-        # the placebo treatment select from control
+        # select placebo treatment units from control pool
         itreat = np.random.choice(panel.icontr, replace=False, size=n_treat)
 
-        # the remaining pool to sample from
+        # sample from the remaining control pool
         pool = [i for i in panel.icontr if i not in itreat]
         icontr = np.random.choice(pool, replace=True, size=n_contr)
 
         bootstrap = Instance(panel, icontr=icontr, mt=mt, mu=mu, tags=dict(name='BOOTSTRAP', seed=seed))
-        placebo = Instance(panel, icontr=icontr, itreat=itreat, mt=mt, mu=mu, tags=dict(name='PLACEBO', seed=seed))
+        placebo = Instance(panel, icontr=icontr, itreat=itreat, mt=mt, mu=mu, tags=dict(name='PLACEBO', seed=seed), Yp=panel.Y)
 
         return [default, bootstrap, placebo]
 
@@ -305,44 +317,64 @@ class InstanceFactory:
         dx['instance'] = data
         return dx.set_index(list(keys))['instance']
 
-def sdid_by_units(panel, instances):
 
-    sunits = MySolver()
-    for instance in instances:
-        A, b, m = instance.matrix_by_unit()
-        sunits.add(A, b, m, tags=instance.tags)
+class Trace:
 
-    return sunits.run(panel.mpost)
+    def __init__(self, instances, ith=10):
+        super().__init__()
+        self.instances = instances
+        self.ith = ith
+        self.records = []
 
-def sdid_by_time(panel, instances):
+    def __call__(self, solver):
 
-    sunits = MySolver()
-    for instance in instances:
-        A, b, m = instance.matrix_by_time()
-        sunits.add(A, b, m, tags=instance.tags)
+        if solver.epoch % self.ith == 0:
+            for k, instance in enumerate(self.instances):
+                self.records.append(dict(epoch=solver.epoch,
+                                         instance=instance,
+                                         trn_loss=solver.trn_loss[k].item(),
+                                         vld_loss=solver.vld_loss[k].item(),
+                                         tst_loss=solver.tst_loss[k].item(),
+                                         w=solver.w[k].detach().numpy(),
+                                         **instance.tags))
 
-    return sunits.run(panel.mtreat)
+
+def to_numpy(dx, col):
+    return np.vstack([x[None, :] for x in dx[col]])
+
+
+def solve(dx, h):
+    A, b, m = [to_numpy(dx, name) for name in ['A', 'b', 'm']]
+    trace = Trace(dx['instance'], ith=10)
+    Optimization().solver(A, b, m, h).run(trace)
+    return pd.DataFrame(trace.records)
+
 
 def sdid_weights(panel):
-
-    factory = InstanceFactory(panel, 10)
+    factory = InstanceFactory(panel, 100)
     instances = factory.run()
 
-    _, utrace = sdid_by_units(panel, instances)
-    _, ttrace = sdid_by_time(panel, instances)
+    dunits = pd.DataFrame([instance.matrix_by_unit() for instance in instances])
+    utrace = solve(dunits, panel.mpost)
+
+    dtime = pd.DataFrame([instance.matrix_by_time() for instance in instances])
+    ttrace = solve(dtime, panel.mtreat)
 
     return instances, utrace, ttrace
 
 
 def plot(utrace, ttrace):
-    utrace['att'] = np.vstack(utrace['tst_error']).mean(axis=1)
+    # utrace['att'] = np.vstack(utrace['tst_error']).mean(axis=1)
     # strace['att_slow'] = [scenario.att(omega=omega)['att'] for scenario, omega in zip(strace['scenario'], strace['w'])]
+    utrace['omega'] = utrace['w']
+    utrace['mode'] = 'UNITS'
+    utrace['att'] = utrace.apply(lambda x: x['instance'].predict(omega=x['omega'])['att'], axis=1)
 
     utrace.query("name == 'PLACEBO'").groupby('epoch')[['trn_loss', 'vld_loss', 'tst_loss']].mean().plot()
     plt.title(f"[UNITS] PLACEBO")
     plt.show()
 
-    epoch = utrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().argmin()
+    epoch = utrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().idxmin()
     omega = (utrace
              .query(f"epoch == {epoch}")
              .set_index(['name', 'seed'])
@@ -350,15 +382,15 @@ def plot(utrace, ttrace):
              .to_frame('omega')
              )
 
-
     ttrace.query("name == 'PLACEBO'").groupby('epoch')[['trn_loss', 'vld_loss', 'tst_loss']].mean().plot()
     plt.title(f"[TIME] PLACEBO")
     plt.show()
 
-    ttrace = ttrace.merge(omega, left_on=['name', 'instance'], right_index=True)
+    ttrace = ttrace.merge(omega, left_on=['name', 'seed'], right_index=True)
     ttrace['lambd'] = ttrace['w']
+    utrace['mode'] = 'TIME'
 
-    ttrace['att'] = dx.apply(lambda x: x['instance'].att(omega=x['omega'], lambd=x['lambd']), axis=1)
+    ttrace['att'] = ttrace.apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'])['att'], axis=1)
 
     trace = (pd.concat([
         utrace.query(f"epoch <= {epoch}"),
@@ -367,7 +399,7 @@ def plot(utrace, ttrace):
              .assign(total_epoch=lambda dx: np.where(dx['mode'] == 'UNITS', dx['epoch'], dx['epoch'] + 1 + epoch))
              )
 
-    epoch = ttrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().argmin()
+    epoch = ttrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().idxmin()
     ans = trace.query("mode == 'TIME'").query(f"epoch == {epoch}")
 
     conf = 0.95
@@ -407,7 +439,10 @@ def se(values):
 
 def sdid2(Y, n_treat, n_post) -> dict:
     panel = MyPanel(Y, n_treat, n_post)
+
     instances, utrace, ttrace = sdid_weights(panel)
+
+    plot(utrace, ttrace)
 
     epoch = utrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().idxmin()
     omega = (utrace
@@ -430,11 +465,10 @@ def sdid2(Y, n_treat, n_post) -> dict:
           .join(omega)
           )
 
-
-    dx['att'] = dx.apply(lambda x: x['instance'].att(omega=x['omega'], lambd=x['lambd'])['att'], axis=1)
+    dx['att'] = dx.apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'])['att'], axis=1)
 
     te = np.array(dx.query("name == 'BOOTSTRAP'")['att'])
-    return dict(att=np.mean(te), se=se(te))
+    return dict(att=np.mean(te), se=np.std(te, ddof=1), dx=dx)
 
 
 class SDID2(DID):
