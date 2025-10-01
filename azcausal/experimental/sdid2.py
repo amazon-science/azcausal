@@ -1,3 +1,5 @@
+import itertools
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,6 +9,7 @@ from numpy.random import RandomState
 from scipy import stats
 
 from azcausal.core.effect import Effect
+from azcausal.core.error import JackKnife
 from azcausal.core.panel import Panel
 from azcausal.core.result import Result
 from azcausal.estimators.panel.did import DID
@@ -20,16 +23,22 @@ from azcausal.estimators.panel.sdid import sdid_plot
 
 class Optimization:
 
-    def __init__(self, n_max_epochs=3_000, algorithm=torch.optim.Adam):
+    def __init__(self, n_max_epochs=3_000, algorithm=torch.optim.Adam, device=None):
         super().__init__()
         self.n_max_epochs = n_max_epochs
         self.algorithm = algorithm
+        self.device = device
 
     def solver(self, A, b, m, h):
-        A = torch.tensor(A, dtype=torch.float32)
-        b = torch.tensor(b, dtype=torch.float32)
-        m = torch.tensor(m, dtype=torch.bool)
-        h = torch.tensor(h, dtype=torch.bool)
+        # if no device provided use gpu if available cpu otherwise
+        device = self.device
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        A = torch.tensor(A, dtype=torch.float32).to(device)
+        b = torch.tensor(b, dtype=torch.float32).to(device)
+        m = torch.tensor(m, dtype=torch.bool).to(device)
+        h = torch.tensor(h, dtype=torch.bool).to(device)
 
         At, bt = A[:, ~h], b[:, ~h]
         Ah, bh = A[:, h], b[:, h]
@@ -108,13 +117,12 @@ class MySolver(object):
 
 class MyPanel(object):
 
-    def __init__(self, Y, n_treat, n_post, tags=None, Yp=None):
+    def __init__(self, Y, n_treat, n_post, Yp=None):
         super().__init__()
         self.Y = Y
         self.Yp = Yp
         self.n_treat = n_treat
         self.n_post = n_post
-        self.tags = tags if tags is not None else {}
 
     def matrix_by_unit(self):
         Y = self.Y
@@ -217,11 +225,16 @@ class MyPanel(object):
         mask[treat] = True
         return mask
 
-    def predict(self, omega=None, lambd=None):
+    def __lt__(self, other):
+        if not isinstance(other, MyPanel):
+            return NotImplemented
+        return id(self) < id(other)
+
+    def predict(self, omega=None, lambd=None, prefix=''):
         Y = self.Y
         contr, treat, pre, post = self.slices
 
-        vcontr = Y[:, contr].mean(axis=0) if omega is None else Y[:, contr] @ omega
+        vcontr = Y[:, contr].mean(axis=1) if omega is None else Y[:, contr] @ omega
         post_contr = vcontr[post].mean()
         pre_contr = vcontr[pre].mean() if lambd is None else vcontr[pre] @ lambd
 
@@ -230,13 +243,30 @@ class MyPanel(object):
         pre_treat = vtreat[pre].mean() if lambd is None else vtreat[pre] @ lambd
 
         att = (post_treat - pre_treat) - (post_contr - pre_contr)
-        return dict(att=att, pre_treat=pre_treat, post_treat=post_treat, pre_contr=pre_contr, post_contr=post_contr)
 
-    def effect(self):
+        obs = post_treat
+        cf = obs - att
+
+        return {
+            f'{prefix}avg_te': att,
+            f'{prefix}perc_te': att / np.abs(cf),
+        }
+
+    def effect(self, prefix=""):
         if self.Yp is not None:
-            Y, Yp = self.Y, self.Yp
-            te = Y[self.spost][:, self.streat] - Yp[self.spost][:, self.streat]
-            return np.mean(te)
+            obs = self.observed()
+            cf = self.counter_factual()
+            att = obs - cf
+            return {
+                f'{prefix}avg_te': att,
+                f'{prefix}perc_te': att / np.abs(cf),
+            }
+
+    def observed(self):
+        return np.mean(self.Y[self.spost][:, self.streat])
+
+    def counter_factual(self):
+        return np.mean(self.Yp[self.spost][:, self.streat])
 
 
 def create_mask(n, p, random_state):
@@ -249,7 +279,7 @@ def create_mask(n, p, random_state):
 
 class Instance(MyPanel):
 
-    def __init__(self, panel, itreat=None, icontr=None, mu=None, mt=None, tags=None, Yp=None):
+    def __init__(self, panel, itreat=None, icontr=None, mu=None, mt=None, Yp=None):
         Y = panel.Y
         itreat = itreat if itreat is not None else panel.itreat
         icontr = icontr if icontr is not None else panel.icontr
@@ -258,7 +288,7 @@ class Instance(MyPanel):
         if Yp is not None:
             Yp = np.hstack([Yp[:, icontr], Yp[:, itreat]])
 
-        super().__init__(YY, len(itreat), panel.n_post, tags=tags, Yp=Yp)
+        super().__init__(YY, len(itreat), panel.n_post, Yp=Yp)
         self.panel = panel
         self.mu = mu if mu is not None else np.full(len(icontr), True)
         self.mt = mt if mt is not None else np.full(panel.n_pre, True)
@@ -291,31 +321,35 @@ class InstanceFactory:
         mt = create_mask(n_pre, self.mtp, random_state)
 
         # the default (no sampling) with time and units masks
-        default = Instance(panel, mt=mt, mu=mu, tags=dict(name='RESULT', seed=seed))
+        default = dict(panel=self.panel,
+                       name='RESULT',
+                       seed=seed,
+                       instance=Instance(panel, mt=mt, mu=mu, Yp=panel.Yp)
+                       )
 
         # select placebo treatment units from control pool
-        itreat = np.random.choice(panel.icontr, replace=False, size=n_treat)
+        itreat = random_state.choice(panel.icontr, replace=False, size=n_treat)
 
         # sample from the remaining control pool
         pool = [i for i in panel.icontr if i not in itreat]
-        icontr = np.random.choice(pool, replace=True, size=n_contr)
+        icontr = random_state.choice(pool, replace=True, size=n_contr)
 
-        bootstrap = Instance(panel, icontr=icontr, mt=mt, mu=mu, tags=dict(name='BOOTSTRAP', seed=seed))
-        placebo = Instance(panel, icontr=icontr, itreat=itreat, mt=mt, mu=mu, tags=dict(name='PLACEBO', seed=seed), Yp=panel.Y)
+        bootstrap = dict(panel=self.panel,
+                         name='BOOTSTRAP',
+                         seed=seed,
+                         instance=Instance(panel, icontr=icontr, mt=mt, mu=mu, Yp=panel.Yp)
+                         )
 
-        return [default, bootstrap, placebo]
+        placebo = dict(panel=self.panel,
+                       name='PLACEBO',
+                       seed=seed,
+                       instance=Instance(panel, icontr=icontr, itreat=itreat, mt=mt, mu=mu, Yp=panel.Y)
+                       )
+
+        return [bootstrap, placebo]
 
     def run(self):
-        data = []
-        index = []
-        for k in range(self.n):
-            for instance in self.sample(k):
-                index.append(instance.tags)
-                data.append(instance)
-        dx = pd.DataFrame(index)
-        keys = dx.columns
-        dx['instance'] = data
-        return dx.set_index(list(keys))['instance']
+        return pd.DataFrame(flatten((self.sample(k) for k in range(self.n))))
 
 
 class Trace:
@@ -336,7 +370,7 @@ class Trace:
                                          vld_loss=solver.vld_loss[k].item(),
                                          tst_loss=solver.tst_loss[k].item(),
                                          w=solver.w[k].detach().numpy(),
-                                         **instance.tags))
+                                         ))
 
 
 def to_numpy(dx, col):
@@ -345,30 +379,89 @@ def to_numpy(dx, col):
 
 def solve(dx, h):
     A, b, m = [to_numpy(dx, name) for name in ['A', 'b', 'm']]
-    trace = Trace(dx['instance'], ith=10)
+    trace = Trace(dx['instance'], ith=100)
     Optimization().solver(A, b, m, h).run(trace)
     return pd.DataFrame(trace.records)
 
 
-def sdid_weights(panel):
-    factory = InstanceFactory(panel, 100)
-    instances = factory.run()
+def sdid_weights_helper(df, keys, dx, h, verbose=False):
+    trace = solve(dx, h)
 
-    dunits = pd.DataFrame([instance.matrix_by_unit() for instance in instances])
-    utrace = solve(dunits, panel.mpost)
+    dxu = df.merge(trace, on='instance')
 
-    dtime = pd.DataFrame([instance.matrix_by_time() for instance in instances])
-    ttrace = solve(dtime, panel.mtreat)
+    avg_tst_loss = (dxu
+                    .query("name == 'PLACEBO'")
+                    .groupby(keys + ['epoch'])
+                    ['tst_loss']
+                    .mean()
+                    .reset_index()
+                    )
 
-    return instances, utrace, ttrace
+    epoch = (avg_tst_loss
+             .groupby(keys)
+             .apply(lambda x: x.set_index('epoch')['tst_loss'].idxmin())
+             .to_frame('epoch')
+             )
+
+    w = (dxu
+    .merge(epoch, on=keys + ['epoch'], how='inner')
+    .set_index(keys + ['instance'])
+    ['w']
+    )
+
+    return w
+
+
+def sdid_weights_dims(instances):
+    dx = pd.DataFrame.from_records([dict(n_treat=x.n_treat, n_contr=x.n_contr, n_pre=x.n_pre, n_post=x.n_post) for x in instances])
+
+    dx = dx.drop_duplicates()
+    assert len(dx) == 1
+    dims = dx.iloc[0].to_dict()
+    return dims["n_pre"], dims["n_post"], dims["n_treat"], dims["n_contr"]
+
+
+def sdid_weights_omega(df, keys, col, verbose=False):
+    n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
+
+    ht = np.full(n_pre + n_post, False)
+    ht[-n_post:] = True
+
+    dunits = pd.DataFrame([instance.matrix_by_unit() for instance in df[col]])
+
+    w = sdid_weights_helper(df, keys, dunits, ht, verbose=verbose)
+
+    dw = (df
+          .set_index(keys + ['instance'])[[]]
+          .join(w.to_frame('omega'))
+          )
+
+    return dw
+
+
+def sdid_weights_lambd(df, keys, col):
+    n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
+
+    hu = np.full(n_contr + n_treat, False)
+    hu[-n_treat:] = True
+
+    dtime = pd.DataFrame([instance.matrix_by_time() for instance in df[col]])
+
+    w = sdid_weights_helper(df, keys, dtime, hu)
+
+    dw = (df
+          .set_index(keys + ['instance'])[[]]
+          .join(w.to_frame('lambd'))
+          )
+
+    return dw
 
 
 def plot(utrace, ttrace):
     # utrace['att'] = np.vstack(utrace['tst_error']).mean(axis=1)
     # strace['att_slow'] = [scenario.att(omega=omega)['att'] for scenario, omega in zip(strace['scenario'], strace['w'])]
     utrace['omega'] = utrace['w']
-    utrace['mode'] = 'UNITS'
-    utrace['att'] = utrace.apply(lambda x: x['instance'].predict(omega=x['omega'])['att'], axis=1)
+    utrace['att'] = apply(lambda x: x['instance'].predict(omega=x['omega']), axis=1)
 
     utrace.query("name == 'PLACEBO'").groupby('epoch')[['trn_loss', 'vld_loss', 'tst_loss']].mean().plot()
     plt.title(f"[UNITS] PLACEBO")
@@ -388,9 +481,7 @@ def plot(utrace, ttrace):
 
     ttrace = ttrace.merge(omega, left_on=['name', 'seed'], right_index=True)
     ttrace['lambd'] = ttrace['w']
-    utrace['mode'] = 'TIME'
-
-    ttrace['att'] = ttrace.apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'])['att'], axis=1)
+    ttrace['att'] = apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd']), axis=1)
 
     trace = (pd.concat([
         utrace.query(f"epoch <= {epoch}"),
@@ -409,7 +500,7 @@ def plot(utrace, ttrace):
                         ('BOOTSTRAP', 'orange'),
                         ('PLACEBO', 'green')
                         ]:
-        dx = trace.query(f"name == '{mode}'").groupby('total_epoch')['att'].aggregate(['mean', 'std'])
+        dx = trace.query(f"name == '{mode}'").groupby('total_epoch').aggregate(['mean', 'std'])
         plt.plot(dx.index, dx['mean'], color=color)
 
         lb = dx['mean'] - z_critical * dx['std']
@@ -440,32 +531,10 @@ def se(values):
 def sdid2(Y, n_treat, n_post) -> dict:
     panel = MyPanel(Y, n_treat, n_post)
 
-    instances, utrace, ttrace = sdid_weights(panel)
+    factory = InstanceFactory(panel, 100)
+    instances = factory.run()
 
-    plot(utrace, ttrace)
-
-    epoch = utrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().idxmin()
-    omega = (utrace
-             .query(f"epoch == {epoch}")
-             .set_index(['name', 'seed'])
-             ['w']
-             .to_frame('omega')
-             )
-
-    epoch = ttrace.query("name == 'PLACEBO'").groupby('epoch')['tst_loss'].mean().idxmin()
-    lambd = (ttrace
-             .query(f"epoch == {epoch}")
-             .set_index(['name', 'seed'])
-             ['w']
-             .to_frame('lambd')
-             )
-
-    dx = (instances.to_frame('instance')
-          .join(lambd)
-          .join(omega)
-          )
-
-    dx['att'] = dx.apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'])['att'], axis=1)
+    dx = sdid_weights(instances, panel.mpost, panel.mtreat)
 
     te = np.array(dx.query("name == 'BOOTSTRAP'")['att'])
     return dict(att=np.mean(te), se=np.std(te, ddof=1), dx=dx)
@@ -493,3 +562,115 @@ class SDID2(DID):
 
     def plot(self, result, title=None, CF=True, C=True, show=True):
         return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
+
+
+def apply(df, fn, inplace=True):
+    dx = df.apply(fn, axis=1, result_type='expand')
+
+    if not inplace:
+        df = df.copy()
+
+    for name, x in dx.to_dict().items():
+        df[name] = x
+    return df
+
+
+def jackknife_se(x):
+    n = len(x)
+    return np.sqrt(((n - 1) / n) * (n - 1) * np.var(x, ddof=1))
+
+
+def bootstrap_se(x):
+    n = len(x)
+    return np.sqrt((n - 1) / n) * np.std(x, ddof=1)
+
+
+def did_jackknife2(panel):
+    Y = panel.Y
+    contr, treat, pre, post = panel.slices
+
+    vpre = Y[pre].mean(axis=0)
+    vpost = Y[post].mean(axis=0)
+
+    delta_contr = (vpost[contr].mean() - vpre[contr].mean())
+    delta_treat = (vpost[treat].mean() - vpre[treat].mean())
+
+    te = []
+    te2 = []
+
+    if panel.n_contr > 1:
+        total = (vpost[contr].sum() - vpre[contr].sum())
+        delta_contr_mod = (total - (vpost[contr] - vpre[contr]))
+        te.extend(delta_treat - delta_contr_mod / (panel.n_contr - 1))
+
+        for i in panel.icontr:
+            delta_contr_mod = (total - (vpost[i] - vpre[i])) / (panel.n_contr - 1)
+            te2.append(delta_treat - delta_contr_mod)
+
+    if panel.n_treat > 1:
+        total = (vpost[treat].sum() - vpre[treat].sum())
+        delta_treat_mod = total - (vpost[treat] - vpre[treat])
+        te.extend((delta_treat_mod - delta_contr) / (panel.n_treat - 1))
+
+        for i in panel.itreat:
+            delta_treat_mod = (total - (vpost[i] - vpre[i])) / (panel.n_treat - 1)
+            te2.append(delta_treat_mod - delta_contr)
+
+    te = np.array(te, dtype=float)
+    te2 = np.array(te, dtype=float)
+
+    jackknife_se(te), jackknife_se(te2)
+
+    return jackknife_se(te)
+
+
+def did_jackknife(panel):
+    Y = panel.Y
+    contr, treat, pre, post = panel.slices
+
+    vpre = Y[pre].mean(axis=0)
+    vpost = Y[post].mean(axis=0)
+
+    delta_contr = (vpost[contr].mean() - vpre[contr].mean())
+    delta_treat = (vpost[treat].mean() - vpre[treat].mean())
+
+    te = []
+
+    if panel.n_contr > 1:
+        total = (vpost[contr].sum() - vpre[contr].sum())
+        for i in panel.icontr:
+            delta_contr_mod = (total - (vpost[i] - vpre[i])) / (panel.n_contr - 1)
+            te.append(delta_treat - delta_contr_mod)
+
+    if panel.n_treat > 1:
+        total = (vpost[treat].sum() - vpre[treat].sum())
+        for i in panel.itreat:
+            delta_treat_mod = (total - (vpost[i] - vpre[i])) / (panel.n_treat - 1)
+            te.append(delta_treat_mod - delta_contr)
+
+    return jackknife_se(te)
+
+
+def did_slow(panel, prefix=''):
+    data = dict()
+    data['outcome'] = pd.DataFrame(panel.Y)
+
+    intervention = np.full_like(panel.Y, 0)
+    intervention[-panel.n_post:, -panel.n_treat:] = 1
+    data['intervention'] = pd.DataFrame(intervention)
+
+    p = Panel(data).setup()
+
+    estimator = DID()
+    result = estimator.fit(p)
+    estimator.error(result, JackKnife())
+
+    return {
+        f'{prefix}avg_te': result.effect.value,
+        f'{prefix}perc_te': result.effect.percentage().value,
+        f'{prefix}avg_error': result.effect.se
+    }
+
+
+def flatten(x):
+    return list(itertools.chain(*x))

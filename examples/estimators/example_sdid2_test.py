@@ -1,11 +1,13 @@
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+from azcausal.core.error import JackKnife
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
-from azcausal.experimental.sdid2 import InstanceFactory, solve, MyPanel, sdid2
+from azcausal.estimators.panel.did import DID
+from azcausal.experimental.sdid2 import InstanceFactory, MyPanel, apply, did_jackknife, did_jackknife2, sdid_weights_omega, sdid_weights_lambd, bootstrap_se
 from azcausal.util import to_panels
-import matplotlib.pyplot as plt
-import pandas as pd
-
-import numpy as np
 
 if __name__ == "__main__":
     df = CaliforniaProp99().df()
@@ -14,34 +16,138 @@ if __name__ == "__main__":
     data = to_panels(df, 'Year', 'State', ['PacksPerCapita', 'treated'])
     ctypes = dict(outcome='PacksPerCapita', time='Year', unit='State', intervention='treated')
 
-    # initialize the panel
+    # Step 1: Parsing the panel and remove treated units (or times0
     panel = CausalPanel(data).setup(**ctypes)
 
+    estimator = DID()
+    result = estimator.fit(panel)
+    estimator.error(result, JackKnife())
+    print(result.info['did'])
+    print(result.summary())
+
     Y = panel["outcome"].values
-    YY = np.hstack([Y[:, ~(panel.treat)], Y[:, panel.treat]])
+
     n_treat = panel.treat.sum()
     n_post = panel.post.sum()
 
-    panel = MyPanel(Y, n_treat, n_post)
+    YY = np.hstack([Y[:, ~(panel.treat)], Y[:, panel.treat]])
+    test = MyPanel(YY, n_treat, n_post)
 
-    factory = InstanceFactory(panel, 1_000)
-    instances = factory.run()
+    print(did_jackknife2(test))
+    print(did_jackknife(test))
 
-    dx = pd.DataFrame(dict(instance=instances))
+    print(test.predict(), did_jackknife(test))
 
-    dx['true_instance_att'] = dx['instance'].map(lambda x: x.effect())
+    # did_slow(test)
 
-    ans = sdid2(Y, n_treat, n_post)
+    Y = Y[:, ~(panel.treat)]
 
+    # Step 2: Create simulations with different types of treatment effects and seeds
+    n_treat = 5
+    n_post = 12
 
-    dx = ans['dx']
-    dx['pred_instance_att'] = dx['att']
-    dx['true_instance_att'] = dx['instance'].map(lambda x: x.effect())
+    simulations = []
+    for att in np.linspace(-0.3, 0.3, 13):
 
-    print(dx.dropna()['true_instance_att'].describe())
-    print(dx.dropna()['pred_instance_att'].describe())
+        for seed in range(3):
+            random_state = np.random.RandomState(seed)
+            Sp = Y[:, random_state.permutation(Y.shape[1])]
 
-    plt.hist(dx['pred_instance_att'], bins=31)
+            S = np.copy(Sp)
+            S[-n_post:, -n_treat:] = (1 + att) * S[-n_post:, -n_treat:]
+
+            sim = MyPanel(S, n_treat, n_post, Yp=Sp)
+
+            simulations.append(dict(att=att, panel=sim))
+
+    dp = pd.DataFrame.from_records(simulations)
+    dp = apply(dp, lambda x: x['panel'].effect(prefix='true_'))
+
+    # dp = apply(dp, lambda x: x['panel'].predict(prefix='pred_'))
+    # dp['pred_avg_error'] = dp['panel'].map(did_jackknife)
+    # dte = dp
+
+    # dp = apply(dp, lambda x: f(x['panel'], prefix='pred_'))
+
+    dx = pd.concat(InstanceFactory(p, 5).run() for p in dp['panel'])
+    df = dp.merge(dx, on='panel')
+
+    omega = sdid_weights_omega(df, ['panel'], 'instance')
+    lambd = sdid_weights_lambd(df, ['panel'], 'instance')
+    df = (df
+          .merge(omega, left_on=['panel', 'instance'], right_index=True)
+          .merge(lambd, left_on=['panel', 'instance'], right_index=True)
+          )
+
+    df = apply(df, lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'], prefix='pred_'))
+
+    # df = apply(df, lambda x: x['instance'].effect(prefix='pred_'))
+    # df = apply(df, lambda x: x['instance'].predict(prefix='pred_'))
+
+    dte = (df
+           .query("name == 'BOOTSTRAP'")
+           .groupby(['att', 'panel'])
+           .aggregate(true_avg_te=('true_avg_te', 'mean'),
+                      true_perc_te=('true_perc_te', 'mean'),
+                      pred_avg_te=('pred_avg_te', 'mean'),
+                      pred_avg_error=('pred_avg_te', bootstrap_se),
+                      # pred_avg_error=('pred_avg_te', lambda x: scipy.stats.sem(x)),
+                      pred_perc_te=('pred_perc_te', 'mean'),
+                      )
+           )
+
+    conf = 0.90
+    alpha = 1 - conf
+    z_critical = stats.norm.ppf(1 - alpha / 2)
+    dx = (dte
+          .assign(pred_avg_ci_lb=lambda dx: dx['pred_avg_te'] - z_critical * dx['pred_avg_error'])
+          .assign(pred_avg_ci_ub=lambda dx: dx['pred_avg_te'] + z_critical * dx['pred_avg_error'])
+          .assign(pred_sign=lambda dx: np.where(dx['pred_avg_ci_lb'] > 0, '+', np.where(dx['pred_avg_ci_ub'] < 0, '-', '+/-')))
+          .assign(true_in_ci=lambda dx: dx['true_avg_te'].between(dx['pred_avg_ci_lb'], dx['pred_avg_ci_ub']))
+          .assign(perc_te_error=lambda dx: dx['pred_perc_te'] - dx['true_perc_te'])
+          )
+
+    # get the power and coverage for each group now
+    pw = dx.groupby('att')['pred_sign'].value_counts(normalize=True).unstack('pred_sign').fillna(0.0)
+    for col in ['-', '+', '+/-']:
+        if col not in pw:
+            pw[col] = 0
+
+    coverage = dx.groupby('att')['true_in_ci'].mean()
+    error = dx.groupby('att').aggregate(mean=('perc_te_error', 'mean'), se=('perc_te_error', 'sem'))
+
+    # Plot
+
+    import matplotlib.pyplot as plt
+
+    fig, (top, middle, bottom) = plt.subplots(3, 1, figsize=(12, 8), sharex=True)
+
+    fig.suptitle(f'', fontsize=16)
+
+    top.plot(pw.index, pw['-'], "-o", color="red", label='-')
+    top.plot(pw.index, pw['+'], "-o", color="green", label='+')
+    top.plot(pw.index, pw['+/-'], "-o", color="black", label='+/-', alpha=0.5)
+    top.axhline(1.0, color="black", alpha=0.15)
+    top.axhline(conf, color="black", alpha=0.15, linestyle='--')
+    top.axhline(0.0, color="black", alpha=0.15)
+    top.set_ylim(-0.05, 1.05)
+    top.set_xlabel("ATT (%)")
+    top.set_ylabel("Statistical Power")
+    top.legend()
+
+    middle.plot(coverage.index, coverage.values, "-o", color="black", label="coverage")
+    middle.axhline(1.0, color="black", alpha=0.15)
+    middle.axhline(0.0, color="black", alpha=0.15)
+    middle.set_ylim(-0.05, 1.05)
+    middle.set_xlabel("ATT (%)")
+    middle.set_ylabel("Coverage")
+    middle.legend()
+
+    bottom.plot(error.index, np.zeros(len(error)), color='black', alpha=0.7)
+    bottom.plot(error.index, error['mean'], '-o', color='red')
+    bottom.errorbar(error.index, error['mean'], error['se'], color='red', alpha=0.5, barsabove=True)
+    bottom.set_xlabel("ATT (%)")
+    bottom.set_ylabel("Error")
+
+    plt.tight_layout()
     plt.show()
-
-    print("sdfsf")

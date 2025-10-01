@@ -6,6 +6,8 @@ import pandas as pd
 import scipy
 from numpy.random import RandomState
 
+import azcausal.experimental.sdid2
+
 
 def format_human_readable(num):
     if num is None:
@@ -69,7 +71,7 @@ def vdid_ci(dx, conf):
     ppr = 1 - scipy.stats.norm.cdf(0.0, loc=dx['te'], scale=(dx['se'] + 1e-16))
     return (dx
             .assign(lb=lb, ub=ub)
-            .assign(sign=lambda dx: dx.apply(vdid_sign, axis=1))
+            .assign(sign=lambda dx: azcausal.experimental.sdid2.apply(vdid_sign, axis=1))
             .assign(ppr=ppr)
             )
 
@@ -313,7 +315,7 @@ def vdid(dx: pd.DataFrame,
 
         # calculate the did and determine the standard error
         ci_did = g(vdid_ratio(vdid_did(ci_samp.unstack(did), fillna=fillna), ratio_marginal))
-        ci_se = ci_did.reset_index(level='sample', drop=True).pipe(lambda dx: group_by_index(dx)).apply(ci_fit)
+        ci_se = azcausal.experimental.sdid2.apply(ci_fit)
 
         # calculate the confidence intervals
         dte_avg = vdid_ci(dte_avg.join(ci_se.to_frame('se')), conf)
