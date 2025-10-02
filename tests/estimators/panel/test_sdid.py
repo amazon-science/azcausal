@@ -4,7 +4,6 @@ from os.path import join, dirname, abspath
 import pytest
 from numpy.testing import assert_almost_equal
 
-import azcausal.experimental.sdid2
 from azcausal.core.error import JackKnife, Bootstrap, Placebo
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
@@ -69,7 +68,7 @@ def add_to_treatment(df, units, start):
             x["treated"] = 1
         return x
 
-    return azcausal.experimental.sdid2.apply(f, axis=1)
+    return df.apply(f, axis=1)
 
 
 def from_r():

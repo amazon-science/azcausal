@@ -6,7 +6,9 @@ from azcausal.core.error import JackKnife
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.did import DID
-from azcausal.experimental.sdid2 import InstanceFactory, MyPanel, apply, did_jackknife, did_jackknife2, sdid_weights_omega, sdid_weights_lambd, bootstrap_se
+from azcausal.estimators.panel.sdid import SDID
+from azcausal.experimental.sdid2 import InstanceFactory, MyPanel, append, jackknife, sdid_weights_omega, sdid_weights_lambd, bootstrap_se, \
+    az_sdid, az_did, az_transform, Instance
 from azcausal.util import to_panels
 
 if __name__ == "__main__":
@@ -18,12 +20,19 @@ if __name__ == "__main__":
 
     # Step 1: Parsing the panel and remove treated units (or times0
     panel = CausalPanel(data).setup(**ctypes)
+    panel.intervention["Wyoming"].loc[1989:] = 1
 
-    estimator = DID()
+    # estimator = DID()
+    # result = estimator.fit(panel)
+    # estimator.error(result, JackKnife())
+    # print(result.info['did'])
+    # print(result.summary(title='DID'))
+
+    estimator = SDID()
     result = estimator.fit(panel)
     estimator.error(result, JackKnife())
-    print(result.info['did'])
-    print(result.summary())
+    print(result.summary(title='SDID'))
+
 
     Y = panel["outcome"].values
 
@@ -31,16 +40,32 @@ if __name__ == "__main__":
     n_post = panel.post.sum()
 
     YY = np.hstack([Y[:, ~(panel.treat)], Y[:, panel.treat]])
-    test = MyPanel(YY, n_treat, n_post)
+    u = np.array(panel.units())
+    ulabel = np.concatenate([u[~(panel.treat)], u[panel.treat]])
+    test = MyPanel(YY, n_treat, n_post, ulabel=ulabel)
 
-    print(did_jackknife2(test))
-    print(did_jackknife(test))
 
-    print(test.predict(), did_jackknife(test))
+    estimator = SDID()
+    result = estimator.fit(az_transform(test))
+    estimator.error(result, JackKnife())
+    print(result.summary(title='SDID'))
+
+
+
+    result = az_sdid(test)
+
+    omega = result['omega']
+    lambd = result['lambd']
+    print("SDID Jackknife", jackknife(test, omega=omega, lambd=lambd))
+
+    # print(did_jackknife2(test))
+    # print(did_jackknife(test))
+    # print(test.predict(), did_jackknife(test))
 
     # did_slow(test)
 
     Y = Y[:, ~(panel.treat)]
+    units = np.array(panel.units())[~(panel.treat)]
 
     # Step 2: Create simulations with different types of treatment effects and seeds
     n_treat = 5
@@ -49,19 +74,34 @@ if __name__ == "__main__":
     simulations = []
     for att in np.linspace(-0.3, 0.3, 13):
 
-        for seed in range(3):
+        for seed in range(100):
             random_state = np.random.RandomState(seed)
-            Sp = Y[:, random_state.permutation(Y.shape[1])]
+            iunits = random_state.permutation(Y.shape[1])
+
+            Sp = Y[:, iunits]
+            ulabel = units[iunits]
 
             S = np.copy(Sp)
             S[-n_post:, -n_treat:] = (1 + att) * S[-n_post:, -n_treat:]
 
-            sim = MyPanel(S, n_treat, n_post, Yp=Sp)
+            sim = MyPanel(S, n_treat, n_post, Yp=Sp, ulabel=ulabel)
 
             simulations.append(dict(att=att, panel=sim))
 
     dp = pd.DataFrame.from_records(simulations)
-    dp = apply(dp, lambda x: x['panel'].effect(prefix='true_'))
+    dp = append(dp, lambda x: x['panel'].effect(prefix='true_'))
+
+    # dp = dp.iloc[:10]
+    #
+    # dp = append(dp, lambda x: az_sdid(x['panel'], prefix='az_'))
+    # dp = append(dp, lambda x: sdid_jackknife(x['panel'], x['az_omega'], lambd=x['az_lambd'], prefix='pred_'))
+    #
+    # print(dp[['pred_avg_error', 'az_avg_error']])
+    #
+    # exit()
+    #
+
+
 
     # dp = apply(dp, lambda x: x['panel'].predict(prefix='pred_'))
     # dp['pred_avg_error'] = dp['panel'].map(did_jackknife)
@@ -69,32 +109,43 @@ if __name__ == "__main__":
 
     # dp = apply(dp, lambda x: f(x['panel'], prefix='pred_'))
 
-    dx = pd.concat(InstanceFactory(p, 5).run() for p in dp['panel'])
-    df = dp.merge(dx, on='panel')
 
-    omega = sdid_weights_omega(df, ['panel'], 'instance')
-    lambd = sdid_weights_lambd(df, ['panel'], 'instance')
-    df = (df
+    dp['instance'] = dp['panel'].map(lambda x: Instance(x))
+    omega = sdid_weights_omega(dp, ['panel'], 'instance')
+    lambd = sdid_weights_lambd(dp, ['panel'], 'instance')
+    df = (dp
           .merge(omega, left_on=['panel', 'instance'], right_index=True)
           .merge(lambd, left_on=['panel', 'instance'], right_index=True)
           )
 
-    df = apply(df, lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd'], prefix='pred_'))
+    dte = append(df, lambda x: jackknife(x['instance'], omega=x['omega'], lambd=x['lambd'], prefix='pred_'))
+
+    # dx = pd.concat(InstanceFactory(p, 5).run() for p in dp['panel'])
+    # df = dp.merge(dx, on='panel')
+    #
+    # omega = sdid_weights_omega(df, ['panel'], 'instance')
+    # lambd = sdid_weights_lambd(df, ['panel'], 'instance')
+    # df = (df
+    #       .merge(omega, left_on=['panel', 'instance'], right_index=True)
+    #       .merge(lambd, left_on=['panel', 'instance'], right_index=True)
+    #       )
+    #
+    # dte = append(df, lambda x: sdid_jackknife(x['instance'], omega=x['omega'], lambd=x['lambd'], prefix='pred_'))
 
     # df = apply(df, lambda x: x['instance'].effect(prefix='pred_'))
     # df = apply(df, lambda x: x['instance'].predict(prefix='pred_'))
 
-    dte = (df
-           .query("name == 'BOOTSTRAP'")
-           .groupby(['att', 'panel'])
-           .aggregate(true_avg_te=('true_avg_te', 'mean'),
-                      true_perc_te=('true_perc_te', 'mean'),
-                      pred_avg_te=('pred_avg_te', 'mean'),
-                      pred_avg_error=('pred_avg_te', bootstrap_se),
-                      # pred_avg_error=('pred_avg_te', lambda x: scipy.stats.sem(x)),
-                      pred_perc_te=('pred_perc_te', 'mean'),
-                      )
-           )
+    # dte = (df
+    #        .query("name == 'BOOTSTRAP'")
+    #        .groupby(['att', 'panel'])
+    #        .aggregate(true_avg_te=('true_avg_te', 'mean'),
+    #                   true_perc_te=('true_perc_te', 'mean'),
+    #                   pred_avg_te=('pred_avg_te', 'mean'),
+    #                   pred_avg_error=('pred_avg_te', bootstrap_se),
+    #                   # pred_avg_error=('pred_avg_te', lambda x: scipy.stats.sem(x)),
+    #                   pred_perc_te=('pred_perc_te', 'mean'),
+    #                   )
+    #        )
 
     conf = 0.90
     alpha = 1 - conf

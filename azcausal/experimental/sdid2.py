@@ -7,13 +7,34 @@ import torch
 import torch.nn.functional as F
 from numpy.random import RandomState
 from scipy import stats
+from tqdm.autonotebook import tqdm
 
 from azcausal.core.effect import Effect
 from azcausal.core.error import JackKnife
 from azcausal.core.panel import Panel
 from azcausal.core.result import Result
 from azcausal.estimators.panel.did import DID
-from azcausal.estimators.panel.sdid import sdid_plot
+from azcausal.estimators.panel.sdid import sdid_plot, SDID
+
+
+# ---------------------------------------------------------------------------------------------------------
+# UTIL
+# ---------------------------------------------------------------------------------------------------------
+
+
+def flatten(x):
+    return list(itertools.chain(*x))
+
+
+def append(df, fn, inplace=True):
+    dx = df.apply(fn, axis=1, result_type='expand')
+
+    if not inplace:
+        df = df.copy()
+
+    for name, x in dx.to_dict().items():
+        df[name] = x
+    return df
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -90,24 +111,27 @@ class MySolver(object):
         trn_loss = forward(self.At, self.w, self.bt, self.m)
         total_loss = trn_loss.mean()
 
-        with torch.no_grad():
-            vld_loss = forward(self.At, self.w, self.bt, ~self.m)
-            tst_loss = forward(self.Ah, self.w, self.bh)
-            # tst_error = (bh - predict(Ah, w))
-
         self.optimizer.zero_grad()
         total_loss.backward()
         self.optimizer.step()
 
         self.total_loss = total_loss
-        self.trn_loss, self.vld_loss, self.tst_loss = trn_loss, vld_loss, tst_loss
+        self.trn_loss = trn_loss
+
+        self.epoch += 1
+
 
     def run(self, callback: lambda x: x):
-        for _ in range(self.n_max_epochs):
+
+        for _ in tqdm(range(self.n_max_epochs)):
             self.advance()
-            with torch.no_grad():
-                callback(self)
-            self.epoch += 1
+
+            if self.epoch % 10 == 0:
+
+                with torch.no_grad():
+                    self.vld_loss = forward(self.At, self.w, self.bt, ~self.m)
+                    self.tst_loss = forward(self.Ah, self.w, self.bh)
+                    callback(self)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -117,10 +141,11 @@ class MySolver(object):
 
 class MyPanel(object):
 
-    def __init__(self, Y, n_treat, n_post, Yp=None):
+    def __init__(self, Y, n_treat, n_post, Yp=None, ulabel=None):
         super().__init__()
         self.Y = Y
         self.Yp = Yp
+        self.ulabel = ulabel
         self.n_treat = n_treat
         self.n_post = n_post
 
@@ -284,11 +309,16 @@ class Instance(MyPanel):
         itreat = itreat if itreat is not None else panel.itreat
         icontr = icontr if icontr is not None else panel.icontr
 
-        YY = np.hstack([Y[:, icontr], Y[:, itreat]])
+        iunits = np.concatenate([icontr, itreat])
+        YY = Y[:, iunits]
         if Yp is not None:
-            Yp = np.hstack([Yp[:, icontr], Yp[:, itreat]])
+            Yp = Yp[:, iunits]
 
-        super().__init__(YY, len(itreat), panel.n_post, Yp=Yp)
+        ulabel = None
+        if panel.ulabel is not None:
+            ulabel = panel.ulabel[iunits]
+
+        super().__init__(YY, len(itreat), panel.n_post, Yp=Yp, ulabel=ulabel)
         self.panel = panel
         self.mu = mu if mu is not None else np.full(len(icontr), True)
         self.mt = mt if mt is not None else np.full(panel.n_pre, True)
@@ -322,10 +352,19 @@ class InstanceFactory:
 
         # the default (no sampling) with time and units masks
         default = dict(panel=self.panel,
-                       name='RESULT',
+                       name='DEFAULT',
                        seed=seed,
                        instance=Instance(panel, mt=mt, mu=mu, Yp=panel.Yp)
                        )
+
+        # select placebo treatment units from control pool
+        itreat = random_state.choice(panel.itreat, replace=True, size=n_treat)
+        icontr = random_state.choice(panel.icontr, replace=True, size=n_contr)
+        bootstrap = dict(panel=self.panel,
+                         name='BOOTSTRAP',
+                         seed=seed,
+                         instance=Instance(panel, icontr=icontr, itreat=itreat, mt=mt, mu=mu, Yp=panel.Yp)
+                         )
 
         # select placebo treatment units from control pool
         itreat = random_state.choice(panel.icontr, replace=False, size=n_treat)
@@ -333,12 +372,6 @@ class InstanceFactory:
         # sample from the remaining control pool
         pool = [i for i in panel.icontr if i not in itreat]
         icontr = random_state.choice(pool, replace=True, size=n_contr)
-
-        bootstrap = dict(panel=self.panel,
-                         name='BOOTSTRAP',
-                         seed=seed,
-                         instance=Instance(panel, icontr=icontr, mt=mt, mu=mu, Yp=panel.Yp)
-                         )
 
         placebo = dict(panel=self.panel,
                        name='PLACEBO',
@@ -354,23 +387,20 @@ class InstanceFactory:
 
 class Trace:
 
-    def __init__(self, instances, ith=10):
+    def __init__(self, instances):
         super().__init__()
         self.instances = instances
-        self.ith = ith
         self.records = []
 
     def __call__(self, solver):
-
-        if solver.epoch % self.ith == 0:
-            for k, instance in enumerate(self.instances):
-                self.records.append(dict(epoch=solver.epoch,
-                                         instance=instance,
-                                         trn_loss=solver.trn_loss[k].item(),
-                                         vld_loss=solver.vld_loss[k].item(),
-                                         tst_loss=solver.tst_loss[k].item(),
-                                         w=solver.w[k].detach().numpy(),
-                                         ))
+        for k, instance in enumerate(self.instances):
+            self.records.append(dict(epoch=solver.epoch,
+                                     instance=instance,
+                                     trn_loss=solver.trn_loss[k].item(),
+                                     vld_loss=solver.vld_loss[k].item(),
+                                     tst_loss=solver.tst_loss[k].item(),
+                                     w=solver.w[k].detach().numpy(),
+                                     ))
 
 
 def to_numpy(dx, col):
@@ -379,35 +409,39 @@ def to_numpy(dx, col):
 
 def solve(dx, h):
     A, b, m = [to_numpy(dx, name) for name in ['A', 'b', 'm']]
-    trace = Trace(dx['instance'], ith=100)
+    trace = Trace(dx['instance'])
     Optimization().solver(A, b, m, h).run(trace)
     return pd.DataFrame(trace.records)
 
 
-def sdid_weights_helper(df, keys, dx, h, verbose=False):
+def sdid_weights_helper(df, keys, dx, h):
     trace = solve(dx, h)
 
     dxu = df.merge(trace, on='instance')
 
-    avg_tst_loss = (dxu
-                    .query("name == 'PLACEBO'")
-                    .groupby(keys + ['epoch'])
-                    ['tst_loss']
-                    .mean()
-                    .reset_index()
-                    )
+    if 'name' in dxu:
+        avg_tst_loss = (dxu
+                        .query("name == 'PLACEBO'")
+                        .groupby(keys + ['epoch'])
+                        ['tst_loss']
+                        .mean()
+                        .reset_index()
+                        )
 
-    epoch = (avg_tst_loss
-             .groupby(keys)
-             .apply(lambda x: x.set_index('epoch')['tst_loss'].idxmin())
-             .to_frame('epoch')
-             )
+        epoch = (avg_tst_loss
+                 .groupby(keys)
+                 .apply(lambda x: x.set_index('epoch')['tst_loss'].idxmin())
+                 .to_frame('epoch')
+                 )
 
-    w = (dxu
-    .merge(epoch, on=keys + ['epoch'], how='inner')
-    .set_index(keys + ['instance'])
-    ['w']
-    )
+        w = (dxu
+        .merge(epoch, on=keys + ['epoch'], how='inner')
+        .set_index(keys + ['instance'])
+        ['w']
+        )
+
+    else:
+        w = dxu.query(f"epoch == {dxu['epoch'].max()}").set_index(keys + ['instance'])['w']
 
     return w
 
@@ -421,7 +455,7 @@ def sdid_weights_dims(instances):
     return dims["n_pre"], dims["n_post"], dims["n_treat"], dims["n_contr"]
 
 
-def sdid_weights_omega(df, keys, col, verbose=False):
+def sdid_weights_omega(df, keys, col):
     n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
 
     ht = np.full(n_pre + n_post, False)
@@ -429,7 +463,7 @@ def sdid_weights_omega(df, keys, col, verbose=False):
 
     dunits = pd.DataFrame([instance.matrix_by_unit() for instance in df[col]])
 
-    w = sdid_weights_helper(df, keys, dunits, ht, verbose=verbose)
+    w = sdid_weights_helper(df, keys, dunits, ht)
 
     dw = (df
           .set_index(keys + ['instance'])[[]]
@@ -457,11 +491,93 @@ def sdid_weights_lambd(df, keys, col):
     return dw
 
 
+# ---------------------------------------------------------------------------------------------------------
+# ESTIMATOR
+# ---------------------------------------------------------------------------------------------------------
+
+
+def sdid2(Y, n_treat, n_post) -> dict:
+    panel = MyPanel(Y, n_treat, n_post)
+
+    factory = InstanceFactory(panel, 100)
+    instances = factory.run()
+
+    dx = sdid_weights(instances, panel.mpost, panel.mtreat)
+
+    te = np.array(dx.query("name == 'BOOTSTRAP'")['att'])
+    return dict(att=np.mean(te), se=np.std(te, ddof=1), dx=dx)
+
+
+# ---------------------------------------------------------------------------------------------------------
+# ERROR
+# ---------------------------------------------------------------------------------------------------------
+
+
+def jackknife_se(x):
+    n = len(x)
+    return np.sqrt(((n - 1) / n) * (n - 1) * np.var(x, ddof=1))
+
+
+def bootstrap_se(x):
+    n = len(x)
+    return np.sqrt((n - 1) / n) * np.std(x, ddof=1)
+
+
+def jackknife(panel, omega=None, lambd=None, prefix=''):
+    Y = panel.Y
+    contr, treat, pre, post = panel.slices
+
+    vpre = Y[pre].mean(axis=0) if lambd is None else Y[pre].T @ lambd
+    vpost = Y[post].mean(axis=0)
+
+    delta_contr = vpost[contr].mean() - vpre[contr].mean()
+
+    post_treat = vpost[treat].mean()
+    pre_treat = vpre[treat].mean()
+    delta_treat = (post_treat - pre_treat)
+
+    avg_te = delta_treat - delta_contr
+
+    te = []
+
+    if panel.n_contr > 1:
+        if omega is None:
+            delta_contr_mod = (delta_contr * panel.n_contr - (vpost[contr] - vpre[contr])) / (panel.n_contr - 1)
+
+        else:
+            n = panel.n_contr
+            M = np.eye(n) == 1
+            delta = (-1 * M + (~M) * (1 / (n - 1))) * omega
+            omega_mod = omega[:, None] + delta
+
+            delta_contr_mod = vpost[contr] @ omega_mod - vpre[contr] @ omega_mod
+
+        te.extend(delta_treat - delta_contr_mod)
+
+    if panel.n_treat > 1:
+        delta_treat_mod = (delta_treat * panel.n_treat - (vpost[treat] - vpre[treat])) / (panel.n_treat - 1)
+        te.extend(delta_treat_mod - delta_contr)
+
+    te = np.array(te, dtype=float)
+    avg_error = jackknife_se(te)
+
+    obs = post_treat
+    cf = obs - avg_te
+
+    return {
+        f'{prefix}avg_te': avg_te,
+        f'{prefix}perc_te': avg_te / cf,
+        f'{prefix}avg_error': avg_error
+    }
+
+
+
+
 def plot(utrace, ttrace):
     # utrace['att'] = np.vstack(utrace['tst_error']).mean(axis=1)
     # strace['att_slow'] = [scenario.att(omega=omega)['att'] for scenario, omega in zip(strace['scenario'], strace['w'])]
     utrace['omega'] = utrace['w']
-    utrace['att'] = apply(lambda x: x['instance'].predict(omega=x['omega']), axis=1)
+    utrace['att'] = append(lambda x: x['instance'].predict(omega=x['omega']), axis=1)
 
     utrace.query("name == 'PLACEBO'").groupby('epoch')[['trn_loss', 'vld_loss', 'tst_loss']].mean().plot()
     plt.title(f"[UNITS] PLACEBO")
@@ -481,7 +597,7 @@ def plot(utrace, ttrace):
 
     ttrace = ttrace.merge(omega, left_on=['name', 'seed'], right_index=True)
     ttrace['lambd'] = ttrace['w']
-    ttrace['att'] = apply(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd']), axis=1)
+    ttrace['att'] = append(lambda x: x['instance'].predict(omega=x['omega'], lambd=x['lambd']), axis=1)
 
     trace = (pd.concat([
         utrace.query(f"epoch <= {epoch}"),
@@ -523,22 +639,9 @@ def plot(utrace, ttrace):
     return ans
 
 
-def se(values):
-    n = len(values)
-    return np.sqrt((n - 1) / n) * np.std(values, ddof=1)
-
-
-def sdid2(Y, n_treat, n_post) -> dict:
-    panel = MyPanel(Y, n_treat, n_post)
-
-    factory = InstanceFactory(panel, 100)
-    instances = factory.run()
-
-    dx = sdid_weights(instances, panel.mpost, panel.mtreat)
-
-    te = np.array(dx.query("name == 'BOOTSTRAP'")['att'])
-    return dict(att=np.mean(te), se=np.std(te, ddof=1), dx=dx)
-
+# ---------------------------------------------------------------------------------------------------------
+# AZCAUSAL
+# ---------------------------------------------------------------------------------------------------------
 
 class SDID2(DID):
 
@@ -564,94 +667,7 @@ class SDID2(DID):
         return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
 
 
-def apply(df, fn, inplace=True):
-    dx = df.apply(fn, axis=1, result_type='expand')
-
-    if not inplace:
-        df = df.copy()
-
-    for name, x in dx.to_dict().items():
-        df[name] = x
-    return df
-
-
-def jackknife_se(x):
-    n = len(x)
-    return np.sqrt(((n - 1) / n) * (n - 1) * np.var(x, ddof=1))
-
-
-def bootstrap_se(x):
-    n = len(x)
-    return np.sqrt((n - 1) / n) * np.std(x, ddof=1)
-
-
-def did_jackknife2(panel):
-    Y = panel.Y
-    contr, treat, pre, post = panel.slices
-
-    vpre = Y[pre].mean(axis=0)
-    vpost = Y[post].mean(axis=0)
-
-    delta_contr = (vpost[contr].mean() - vpre[contr].mean())
-    delta_treat = (vpost[treat].mean() - vpre[treat].mean())
-
-    te = []
-    te2 = []
-
-    if panel.n_contr > 1:
-        total = (vpost[contr].sum() - vpre[contr].sum())
-        delta_contr_mod = (total - (vpost[contr] - vpre[contr]))
-        te.extend(delta_treat - delta_contr_mod / (panel.n_contr - 1))
-
-        for i in panel.icontr:
-            delta_contr_mod = (total - (vpost[i] - vpre[i])) / (panel.n_contr - 1)
-            te2.append(delta_treat - delta_contr_mod)
-
-    if panel.n_treat > 1:
-        total = (vpost[treat].sum() - vpre[treat].sum())
-        delta_treat_mod = total - (vpost[treat] - vpre[treat])
-        te.extend((delta_treat_mod - delta_contr) / (panel.n_treat - 1))
-
-        for i in panel.itreat:
-            delta_treat_mod = (total - (vpost[i] - vpre[i])) / (panel.n_treat - 1)
-            te2.append(delta_treat_mod - delta_contr)
-
-    te = np.array(te, dtype=float)
-    te2 = np.array(te, dtype=float)
-
-    jackknife_se(te), jackknife_se(te2)
-
-    return jackknife_se(te)
-
-
-def did_jackknife(panel):
-    Y = panel.Y
-    contr, treat, pre, post = panel.slices
-
-    vpre = Y[pre].mean(axis=0)
-    vpost = Y[post].mean(axis=0)
-
-    delta_contr = (vpost[contr].mean() - vpre[contr].mean())
-    delta_treat = (vpost[treat].mean() - vpre[treat].mean())
-
-    te = []
-
-    if panel.n_contr > 1:
-        total = (vpost[contr].sum() - vpre[contr].sum())
-        for i in panel.icontr:
-            delta_contr_mod = (total - (vpost[i] - vpre[i])) / (panel.n_contr - 1)
-            te.append(delta_treat - delta_contr_mod)
-
-    if panel.n_treat > 1:
-        total = (vpost[treat].sum() - vpre[treat].sum())
-        for i in panel.itreat:
-            delta_treat_mod = (total - (vpost[i] - vpre[i])) / (panel.n_treat - 1)
-            te.append(delta_treat_mod - delta_contr)
-
-    return jackknife_se(te)
-
-
-def did_slow(panel, prefix=''):
+def az_transform(panel):
     data = dict()
     data['outcome'] = pd.DataFrame(panel.Y)
 
@@ -659,18 +675,42 @@ def did_slow(panel, prefix=''):
     intervention[-panel.n_post:, -panel.n_treat:] = 1
     data['intervention'] = pd.DataFrame(intervention)
 
-    p = Panel(data).setup()
+    if panel.ulabel is not None:
+        for _, dx in data.items():
+            dx.columns = panel.ulabel
 
-    estimator = DID()
+    return Panel(data).setup()
+
+
+def az(estimator, panel, prefix='', jackknife=True):
+    p = az_transform(panel)
+
     result = estimator.fit(p)
-    estimator.error(result, JackKnife())
+
+    if jackknife:
+        estimator.error(result, JackKnife())
+
+    omega = result['info'].get('omega', None)
+    if omega is not None:
+        omega = omega[panel.ulabel[panel.scontr]].values
+
+    lambd = result['info'].get('lambd', None)
+    if lambd is not None:
+        lambd = lambd.values
 
     return {
+        f'{prefix}omega': omega,
+        f'{prefix}lambd': lambd,
+        f'{prefix}effect': result.effect,
         f'{prefix}avg_te': result.effect.value,
         f'{prefix}perc_te': result.effect.percentage().value,
         f'{prefix}avg_error': result.effect.se
     }
 
 
-def flatten(x):
-    return list(itertools.chain(*x))
+def az_did(panel, **kwargs):
+    return az(DID(), panel, **kwargs)
+
+
+def az_sdid(panel, **kwargs):
+    return az(SDID(), panel, **kwargs)
