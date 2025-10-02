@@ -5,10 +5,8 @@ from scipy import stats
 from azcausal.core.error import JackKnife
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
-from azcausal.estimators.panel.did import DID
 from azcausal.estimators.panel.sdid import SDID
-from azcausal.experimental.sdid2 import InstanceFactory, MyPanel, append, jackknife, sdid_weights_omega, sdid_weights_lambd, bootstrap_se, \
-    az_sdid, az_did, az_transform, Instance
+from azcausal.experimental.sdid2 import MyPanel, append, sdid_weights_omega, sdid_weights_lambd, az_sdid, az_panel, Instance, did
 from azcausal.util import to_panels
 
 if __name__ == "__main__":
@@ -33,7 +31,6 @@ if __name__ == "__main__":
     estimator.error(result, JackKnife())
     print(result.summary(title='SDID'))
 
-
     Y = panel["outcome"].values
 
     n_treat = panel.treat.sum()
@@ -44,19 +41,16 @@ if __name__ == "__main__":
     ulabel = np.concatenate([u[~(panel.treat)], u[panel.treat]])
     test = MyPanel(YY, n_treat, n_post, ulabel=ulabel)
 
-
     estimator = SDID()
-    result = estimator.fit(az_transform(test))
+    result = estimator.fit(az_panel(test))
     estimator.error(result, JackKnife())
     print(result.summary(title='SDID'))
-
-
 
     result = az_sdid(test)
 
     omega = result['omega']
     lambd = result['lambd']
-    print("SDID Jackknife", jackknife(test, omega=omega, lambd=lambd))
+    print("SDID Jackknife", did(test, omega=omega, lambd=lambd, jackknife=True))
 
     # print(did_jackknife2(test))
     # print(did_jackknife(test))
@@ -101,24 +95,23 @@ if __name__ == "__main__":
     # exit()
     #
 
-
-
     # dp = apply(dp, lambda x: x['panel'].predict(prefix='pred_'))
     # dp['pred_avg_error'] = dp['panel'].map(did_jackknife)
     # dte = dp
 
     # dp = apply(dp, lambda x: f(x['panel'], prefix='pred_'))
 
-
     dp['instance'] = dp['panel'].map(lambda x: Instance(x))
-    omega = sdid_weights_omega(dp, ['panel'], 'instance')
-    lambd = sdid_weights_lambd(dp, ['panel'], 'instance')
+
+    omega = sdid_weights_omega(dp, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4))
+
+    lambd = sdid_weights_lambd(dp, ['panel'], 'instance', eta=1e-06)
     df = (dp
           .merge(omega, left_on=['panel', 'instance'], right_index=True)
           .merge(lambd, left_on=['panel', 'instance'], right_index=True)
           )
 
-    dte = append(df, lambda x: jackknife(x['instance'], omega=x['omega'], lambd=x['lambd'], prefix='pred_'))
+    dte = append(df, lambda x: did(x['instance'], omega=x['omega'], lambd=x['lambd'], jackknife=True, prefix='pred_'))
 
     # dx = pd.concat(InstanceFactory(p, 5).run() for p in dp['panel'])
     # df = dp.merge(dx, on='panel')

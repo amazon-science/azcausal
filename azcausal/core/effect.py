@@ -338,7 +338,7 @@ class Effect:
 
 def get_true_effect(cdf):
     scale = cdf.n_interventions()
-    observed = cdf.observed()
+    observed = cdf.obs()
     att = cdf['te'].values.sum() / scale
     se = 0.0
     return Effect(att, se=se, observed=observed, scale=scale)

@@ -50,7 +50,7 @@ class Optimization:
         self.algorithm = algorithm
         self.device = device
 
-    def solver(self, A, b, m, h):
+    def solver(self, A, b, m, h, zeta=None):
         # if no device provided use gpu if available cpu otherwise
         device = self.device
         if device is None:
@@ -61,6 +61,9 @@ class Optimization:
         m = torch.tensor(m, dtype=torch.bool).to(device)
         h = torch.tensor(h, dtype=torch.bool).to(device)
 
+        if zeta is not None:
+            zeta = torch.tensor(zeta, dtype=torch.bool).to(device)
+
         At, bt = A[:, ~h], b[:, ~h]
         Ah, bh = A[:, h], b[:, h]
 
@@ -69,14 +72,14 @@ class Optimization:
 
         optimizer = self.algorithm([x], lr=0.001)
 
-        return MySolver(At, bt, Ah, bh, x, m, optimizer, self.n_max_epochs)
+        return MySolver(At, bt, Ah, bh, x, zeta, m, optimizer, self.n_max_epochs)
 
 
 def predict(A, w):
     return torch.bmm(A, w.unsqueeze(2)).squeeze(2)
 
 
-def forward(A, w, b, m=None):
+def forward(A, w, b, zeta=None, m=None):
     y_hat = predict(A, w)
     loss = F.mse_loss(y_hat, b, reduction='none')
 
@@ -84,17 +87,21 @@ def forward(A, w, b, m=None):
         loss = (loss * m.to(A.dtype)).sum(dim=1) / m.sum(dim=1)
     else:
         loss = loss.mean(dim=1)
-    return loss
+
+    penalty = (zeta ** 2) * (w ** 2).sum()
+
+    return loss + penalty
 
 
 class MySolver(object):
 
-    def __init__(self, At, bt, Ah, bh, x, m, optimizer, n_max_epochs):
+    def __init__(self, At, bt, Ah, bh, x, zeta, m, optimizer, n_max_epochs):
         super().__init__()
         self.At, self.bt = At, bt
         self.Ah, self.bh = Ah, bh
         self.m = m
         self.x = x
+        self.zeta = zeta
         self.w = None
 
         self.optimizer = optimizer
@@ -108,7 +115,7 @@ class MySolver(object):
 
     def advance(self):
         self.w = F.softmax(self.x, dim=1)
-        trn_loss = forward(self.At, self.w, self.bt, self.m)
+        trn_loss = forward(self.At, self.w, self.bt, zeta=self.zeta, m=self.m)
         total_loss = trn_loss.mean()
 
         self.optimizer.zero_grad()
@@ -120,18 +127,19 @@ class MySolver(object):
 
         self.epoch += 1
 
-
     def run(self, callback: lambda x: x):
 
-        for _ in tqdm(range(self.n_max_epochs)):
+        for _ in (pbar := tqdm(range(self.n_max_epochs))):
             self.advance()
 
             if self.epoch % 10 == 0:
 
                 with torch.no_grad():
-                    self.vld_loss = forward(self.At, self.w, self.bt, ~self.m)
-                    self.tst_loss = forward(self.Ah, self.w, self.bh)
+                    self.vld_loss = forward(self.At, self.w, self.bt, zeta=self.zeta, m=~self.m)
+                    self.tst_loss = forward(self.Ah, self.w, self.bh, zeta=self.zeta)
                     callback(self)
+
+                    pbar.set_description(f"{self.epoch} {self.total_loss.item()}")
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -279,18 +287,18 @@ class MyPanel(object):
 
     def effect(self, prefix=""):
         if self.Yp is not None:
-            obs = self.observed()
-            cf = self.counter_factual()
+            obs = self.obs()
+            cf = self.cf()
             att = obs - cf
             return {
                 f'{prefix}avg_te': att,
                 f'{prefix}perc_te': att / np.abs(cf),
             }
 
-    def observed(self):
+    def obs(self):
         return np.mean(self.Y[self.spost][:, self.streat])
 
-    def counter_factual(self):
+    def cf(self):
         return np.mean(self.Yp[self.spost][:, self.streat])
 
 
@@ -407,15 +415,21 @@ def to_numpy(dx, col):
     return np.vstack([x[None, :] for x in dx[col]])
 
 
-def solve(dx, h):
+def solve(dx, h, eta=None):
     A, b, m = [to_numpy(dx, name) for name in ['A', 'b', 'm']]
+
+    zeta = None
+    if eta is not None:
+        noise = np.diff(A[:, ~h], axis=1).std(axis=(1, 2), ddof=1)
+        zeta = eta * noise
+
     trace = Trace(dx['instance'])
-    Optimization().solver(A, b, m, h).run(trace)
+    Optimization().solver(A, b, m, h, zeta=zeta).run(trace)
     return pd.DataFrame(trace.records)
 
 
-def sdid_weights_helper(df, keys, dx, h):
-    trace = solve(dx, h)
+def sdid_weights_opt(df, keys, dx, h, eta=None):
+    trace = solve(dx, h, eta=eta)
 
     dxu = df.merge(trace, on='instance')
 
@@ -455,15 +469,14 @@ def sdid_weights_dims(instances):
     return dims["n_pre"], dims["n_post"], dims["n_treat"], dims["n_contr"]
 
 
-def sdid_weights_omega(df, keys, col):
+def sdid_weights_omega(df, keys, col, eta=None):
     n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
 
     ht = np.full(n_pre + n_post, False)
     ht[-n_post:] = True
 
     dunits = pd.DataFrame([instance.matrix_by_unit() for instance in df[col]])
-
-    w = sdid_weights_helper(df, keys, dunits, ht)
+    w = sdid_weights_opt(df, keys, dunits, ht, eta=eta)
 
     dw = (df
           .set_index(keys + ['instance'])[[]]
@@ -473,7 +486,7 @@ def sdid_weights_omega(df, keys, col):
     return dw
 
 
-def sdid_weights_lambd(df, keys, col):
+def sdid_weights_lambd(df, keys, col, eta=None):
     n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
 
     hu = np.full(n_contr + n_treat, False)
@@ -481,7 +494,7 @@ def sdid_weights_lambd(df, keys, col):
 
     dtime = pd.DataFrame([instance.matrix_by_time() for instance in df[col]])
 
-    w = sdid_weights_helper(df, keys, dtime, hu)
+    w = sdid_weights_opt(df, keys, dtime, hu, eta=eta)
 
     dw = (df
           .set_index(keys + ['instance'])[[]]
@@ -523,7 +536,7 @@ def bootstrap_se(x):
     return np.sqrt((n - 1) / n) * np.std(x, ddof=1)
 
 
-def jackknife(panel, omega=None, lambd=None, prefix=''):
+def did(panel, omega=None, lambd=None, jackknife=False, prefix=''):
     Y = panel.Y
     contr, treat, pre, post = panel.slices
 
@@ -538,39 +551,39 @@ def jackknife(panel, omega=None, lambd=None, prefix=''):
 
     avg_te = delta_treat - delta_contr
 
-    te = []
-
-    if panel.n_contr > 1:
-        if omega is None:
-            delta_contr_mod = (delta_contr * panel.n_contr - (vpost[contr] - vpre[contr])) / (panel.n_contr - 1)
-
-        else:
-            n = panel.n_contr
-            M = np.eye(n) == 1
-            delta = (-1 * M + (~M) * (1 / (n - 1))) * omega
-            omega_mod = omega[:, None] + delta
-
-            delta_contr_mod = vpost[contr] @ omega_mod - vpre[contr] @ omega_mod
-
-        te.extend(delta_treat - delta_contr_mod)
-
-    if panel.n_treat > 1:
-        delta_treat_mod = (delta_treat * panel.n_treat - (vpost[treat] - vpre[treat])) / (panel.n_treat - 1)
-        te.extend(delta_treat_mod - delta_contr)
-
-    te = np.array(te, dtype=float)
-    avg_error = jackknife_se(te)
-
     obs = post_treat
     cf = obs - avg_te
 
-    return {
+    ans = {
         f'{prefix}avg_te': avg_te,
-        f'{prefix}perc_te': avg_te / cf,
-        f'{prefix}avg_error': avg_error
+        f'{prefix}perc_te': avg_te / np.abs(cf)
     }
 
+    if jackknife:
 
+        te = []
+        if panel.n_contr > 1:
+            if omega is None:
+                delta_contr_mod = (delta_contr * panel.n_contr - (vpost[contr] - vpre[contr])) / (panel.n_contr - 1)
+
+            else:
+                n = panel.n_contr
+                M = np.eye(n) == 1
+                delta = (-1 * M + (~M) * (1 / (n - 1))) * omega
+                omega_mod = omega[:, None] + delta
+
+                delta_contr_mod = vpost[contr] @ omega_mod - vpre[contr] @ omega_mod
+
+            te.extend(delta_treat - delta_contr_mod)
+
+        if panel.n_treat > 1:
+            delta_treat_mod = (delta_treat * panel.n_treat - (vpost[treat] - vpre[treat])) / (panel.n_treat - 1)
+            te.extend(delta_treat_mod - delta_contr)
+
+        te = np.array(te, dtype=float)
+        ans[f'{prefix}avg_error'] = jackknife_se(te)
+
+    return ans
 
 
 def plot(utrace, ttrace):
@@ -667,7 +680,7 @@ class SDID2(DID):
         return sdid_plot(result.effect, title=title, CF=CF, C=C, show=show)
 
 
-def az_transform(panel):
+def az_panel(panel):
     data = dict()
     data['outcome'] = pd.DataFrame(panel.Y)
 
@@ -683,7 +696,7 @@ def az_transform(panel):
 
 
 def az(estimator, panel, prefix='', jackknife=True):
-    p = az_transform(panel)
+    p = az_panel(panel)
 
     result = estimator.fit(p)
 
