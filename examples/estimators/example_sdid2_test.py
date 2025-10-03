@@ -52,10 +52,12 @@ if __name__ == "__main__":
     lambd = result['lambd']
 
     print("fomega", result['fomega'])
+    print("flambd", result['flambd'])
 
     dx = pd.DataFrame.from_records([dict(panel=test, instance=Instance(test), omega=omega, lambd=lambd)])
 
-    sdid_weights_omega(dx, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4), w='omega')
+    # sdid_weights_lambd(dx, ['panel'], 'instance', eta=1e-6, w='lambd')
+    # sdid_weights_omega(dx, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4), w='omega')
 
     print("SDID Jackknife", did(test, omega=omega, lambd=lambd, jackknife=True))
 
@@ -110,13 +112,21 @@ if __name__ == "__main__":
 
     dp['instance'] = dp['panel'].map(lambda x: Instance(x))
 
-    omega = sdid_weights_omega(dp, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4))
+    omega, utrace = sdid_weights_omega(dp, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4))
+    lambd, ttrace = sdid_weights_lambd(dp, ['panel'], 'instance', eta=1e-06)
 
-    lambd = sdid_weights_lambd(dp, ['panel'], 'instance', eta=1e-06)
     df = (dp
-          .merge(omega, left_on=['panel', 'instance'], right_index=True)
-          .merge(lambd, left_on=['panel', 'instance'], right_index=True)
+          .merge(omega.to_frame('omega'), left_on=['panel', 'instance'], right_index=True)
+          .merge(lambd.to_frame('lambd'), left_on=['panel', 'instance'], right_index=True)
           )
+
+    import matplotlib.pyplot as plt
+    dx = utrace.groupby(['instance', 'epoch'])['tst_loss'].mean()
+
+    for instance in utrace['instance'].unique()[:5]:
+        dd = dx.xs(instance)
+        plt.plot(dd.index, dd.values)
+        plt.show()
 
     dte = append(df, lambda x: did(x['instance'], omega=x['omega'], lambd=x['lambd'], jackknife=True, prefix='pred_'))
 

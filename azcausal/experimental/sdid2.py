@@ -32,8 +32,9 @@ def append(df, fn, inplace=True):
     if not inplace:
         df = df.copy()
 
-    for name, x in dx.to_dict().items():
-        df[name] = x
+    for col in dx.columns:
+        df[col] = dx[col].values
+
     return df
 
 
@@ -92,9 +93,11 @@ def forward(A, w, b, zeta=None, m=None):
     else:
         loss = loss.mean(dim=1)
 
-    penalty = (zeta ** 2) * (w ** 2).sum()
+    if zeta is not None:
+        penalty = (zeta ** 2) * (w ** 2).sum(dim=-1)
+        loss += penalty
 
-    return loss + penalty
+    return loss
 
 
 class MySolver(object):
@@ -466,7 +469,7 @@ def sdid_weights_opt(df, keys, dx, h, eta=None, w=None):
     else:
         w = dxu.query(f"epoch == {dxu['epoch'].max()}").set_index(keys + ['instance'])['w']
 
-    return w
+    return w, trace
 
 
 def sdid_weights_dims(instances):
@@ -485,18 +488,10 @@ def sdid_weights_omega(df, keys, col, eta=None, w=None):
     ht[-n_post:] = True
 
     dunits = pd.DataFrame([instance.matrix_by_unit() for instance in df[col]])
-
     if w is not None:
         w = to_numpy(df, w)
 
-    w = sdid_weights_opt(df, keys, dunits, ht, eta=eta, w=w)
-
-    dw = (df
-          .set_index(keys + ['instance'])[[]]
-          .join(w.to_frame('omega'))
-          )
-
-    return dw
+    return sdid_weights_opt(df, keys, dunits, ht, eta=eta, w=w)
 
 
 def sdid_weights_lambd(df, keys, col, eta=None, w=None):
@@ -506,15 +501,10 @@ def sdid_weights_lambd(df, keys, col, eta=None, w=None):
     hu[-n_treat:] = True
 
     dtime = pd.DataFrame([instance.matrix_by_time() for instance in df[col]])
+    if w is not None:
+        w = to_numpy(df, w)
 
-    w = sdid_weights_opt(df, keys, dtime, hu, eta=eta, w=w)
-
-    dw = (df
-          .set_index(keys + ['instance'])[[]]
-          .join(w.to_frame('lambd'))
-          )
-
-    return dw
+    return sdid_weights_opt(df, keys, dtime, hu, eta=eta, w=w)
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -556,7 +546,9 @@ def did(panel, omega=None, lambd=None, jackknife=False, prefix=''):
     vpre = Y[pre].mean(axis=0) if lambd is None else Y[pre].T @ lambd
     vpost = Y[post].mean(axis=0)
 
-    delta_contr = vpost[contr].mean() - vpre[contr].mean()
+    pre_contr = vpre[contr].mean() if omega is None else vpre[contr] @ omega
+    post_contr = vpost[contr].mean() if omega is None else vpost[contr] @ omega
+    delta_contr = post_contr - pre_contr
 
     post_treat = vpost[treat].mean()
     pre_treat = vpre[treat].mean()
