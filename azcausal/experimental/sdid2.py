@@ -50,7 +50,7 @@ class Optimization:
         self.algorithm = algorithm
         self.device = device
 
-    def solver(self, A, b, m, h, zeta=None):
+    def solver(self, A, b, m, h, zeta=None, x=None):
         # if no device provided use gpu if available cpu otherwise
         device = self.device
         if device is None:
@@ -62,13 +62,17 @@ class Optimization:
         h = torch.tensor(h, dtype=torch.bool).to(device)
 
         if zeta is not None:
-            zeta = torch.tensor(zeta, dtype=torch.bool).to(device)
+            zeta = torch.tensor(zeta, dtype=torch.float32).to(device)
 
         At, bt = A[:, ~h], b[:, ~h]
         Ah, bh = A[:, h], b[:, h]
 
         n_samples, _, n_units = At.shape
-        x = torch.full((n_samples, n_units), 0.1, requires_grad=True, dtype=torch.float32)
+
+        if x is not None:
+            x = torch.tensor(x, dtype=torch.float32, requires_grad=True).to(device)
+        else:
+            x = torch.full((n_samples, n_units), 0.1, requires_grad=True, dtype=torch.float32)
 
         optimizer = self.algorithm([x], lr=0.001)
 
@@ -137,9 +141,10 @@ class MySolver(object):
                 with torch.no_grad():
                     self.vld_loss = forward(self.At, self.w, self.bt, zeta=self.zeta, m=~self.m)
                     self.tst_loss = forward(self.Ah, self.w, self.bh, zeta=self.zeta)
+
                     callback(self)
 
-                    pbar.set_description(f"{self.epoch} {self.total_loss.item()}")
+                    pbar.set_description(f"{self.epoch} {self.total_loss.item()} | {self.tst_loss.mean().item()}")
 
 
 # ---------------------------------------------------------------------------------------------------------
@@ -415,7 +420,7 @@ def to_numpy(dx, col):
     return np.vstack([x[None, :] for x in dx[col]])
 
 
-def solve(dx, h, eta=None):
+def solve(dx, h, eta=None, w=None):
     A, b, m = [to_numpy(dx, name) for name in ['A', 'b', 'm']]
 
     zeta = None
@@ -423,13 +428,17 @@ def solve(dx, h, eta=None):
         noise = np.diff(A[:, ~h], axis=1).std(axis=(1, 2), ddof=1)
         zeta = eta * noise
 
+    x = None
+    if w is not None:
+        x = np.log(w + 1e-32)
+
     trace = Trace(dx['instance'])
-    Optimization().solver(A, b, m, h, zeta=zeta).run(trace)
+    Optimization().solver(A, b, m, h, zeta=zeta, x=x).run(trace)
     return pd.DataFrame(trace.records)
 
 
-def sdid_weights_opt(df, keys, dx, h, eta=None):
-    trace = solve(dx, h, eta=eta)
+def sdid_weights_opt(df, keys, dx, h, eta=None, w=None):
+    trace = solve(dx, h, eta=eta, w=w)
 
     dxu = df.merge(trace, on='instance')
 
@@ -469,14 +478,18 @@ def sdid_weights_dims(instances):
     return dims["n_pre"], dims["n_post"], dims["n_treat"], dims["n_contr"]
 
 
-def sdid_weights_omega(df, keys, col, eta=None):
+def sdid_weights_omega(df, keys, col, eta=None, w=None):
     n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
 
     ht = np.full(n_pre + n_post, False)
     ht[-n_post:] = True
 
     dunits = pd.DataFrame([instance.matrix_by_unit() for instance in df[col]])
-    w = sdid_weights_opt(df, keys, dunits, ht, eta=eta)
+
+    if w is not None:
+        w = to_numpy(df, w)
+
+    w = sdid_weights_opt(df, keys, dunits, ht, eta=eta, w=w)
 
     dw = (df
           .set_index(keys + ['instance'])[[]]
@@ -486,7 +499,7 @@ def sdid_weights_omega(df, keys, col, eta=None):
     return dw
 
 
-def sdid_weights_lambd(df, keys, col, eta=None):
+def sdid_weights_lambd(df, keys, col, eta=None, w=None):
     n_pre, n_post, n_treat, n_contr = sdid_weights_dims(df[col])
 
     hu = np.full(n_contr + n_treat, False)
@@ -494,7 +507,7 @@ def sdid_weights_lambd(df, keys, col, eta=None):
 
     dtime = pd.DataFrame([instance.matrix_by_time() for instance in df[col]])
 
-    w = sdid_weights_opt(df, keys, dtime, hu, eta=eta)
+    w = sdid_weights_opt(df, keys, dtime, hu, eta=eta, w=w)
 
     dw = (df
           .set_index(keys + ['instance'])[[]]
@@ -704,16 +717,22 @@ def az(estimator, panel, prefix='', jackknife=True):
         estimator.error(result, JackKnife())
 
     omega = result['info'].get('omega', None)
+    fomega = None
     if omega is not None:
         omega = omega[panel.ulabel[panel.scontr]].values
+        fomega = result['info']['solvers']['omega']['f']
 
     lambd = result['info'].get('lambd', None)
+    flambd = None
     if lambd is not None:
         lambd = lambd.values
+        flambd = result['info']['solvers']['lambd']['f']
 
     return {
         f'{prefix}omega': omega,
         f'{prefix}lambd': lambd,
+        f'{prefix}fomega': fomega,
+        f'{prefix}flambd': flambd,
         f'{prefix}effect': result.effect,
         f'{prefix}avg_te': result.effect.value,
         f'{prefix}perc_te': result.effect.percentage().value,

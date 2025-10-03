@@ -50,6 +50,13 @@ if __name__ == "__main__":
 
     omega = result['omega']
     lambd = result['lambd']
+
+    print("fomega", result['fomega'])
+
+    dx = pd.DataFrame.from_records([dict(panel=test, instance=Instance(test), omega=omega, lambd=lambd)])
+
+    sdid_weights_omega(dx, ['panel'], 'instance', eta=(n_treat * n_post) ** (1 / 4), w='omega')
+
     print("SDID Jackknife", did(test, omega=omega, lambd=lambd, jackknife=True))
 
     # print(did_jackknife2(test))
