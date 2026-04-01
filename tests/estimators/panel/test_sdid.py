@@ -50,6 +50,26 @@ def test_jackknife_correct(sdid, data):
     assert_almost_equal(17.867241960405, result.effect.se)
 
 
+def test_fast_jackknife_matches_standard(data):
+    """Fast JackKnife (use_fast_jackknife=True) must produce the same SE as the standard JackKnife."""
+    panel = data.panel()
+    # we need at least two treatment units for jackknife
+    panel.intervention["Wyoming"].loc[1989:] = 1
+
+    # standard JackKnife
+    sdid_std = SDID(use_fast_jackknife=False)
+    result_std = sdid_std.fit(panel)
+    sdid_std.error(result_std, JackKnife())
+
+    # optimized JackKnife
+    sdid_fast = SDID(use_fast_jackknife=True)
+    result_fast = sdid_fast.fit(panel)
+    sdid_fast.error(result_fast, JackKnife())
+
+    assert_almost_equal(result_std.effect.value, result_fast.effect.value)
+    assert_almost_equal(result_std.effect.se, result_fast.effect.se)
+
+
 def test_placebo_no_fail(sdid, data):
     panel = data.panel()
     estm = sdid.fit(panel)
