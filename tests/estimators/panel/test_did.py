@@ -49,6 +49,24 @@ def test_did_error_se_no_fail():
     estimator.error(result, Bootstrap(n_samples=11))
 
 
+def test_did_panel_fast_jackknife_matches_standard():
+    """Fast JackKnife (use_fast_jackknife=True) must produce the same SE as the standard JackKnife for panel DID."""
+    from azcausal.estimators.panel.did import DID
+
+    # standard JackKnife
+    estimator_std = DID(use_fast_jackknife=False)
+    result_std = estimator_std.fit(california99)
+    estimator_std.error(result_std, JackKnife())
+
+    # fast JackKnife
+    estimator_fast = DID(use_fast_jackknife=True)
+    result_fast = estimator_fast.fit(california99)
+    estimator_fast.error(result_fast, JackKnife())
+
+    assert_almost_equal(result_std.effect.value, result_fast.effect.value)
+    assert_almost_equal(result_std.effect.se, result_fast.effect.se)
+
+
 def test_did_billboard():
     from azcausal.estimators.did import DID
     estimator = DID()
