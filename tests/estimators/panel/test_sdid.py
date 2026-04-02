@@ -41,7 +41,7 @@ def test_california_correct(sdid, data):
 def test_jackknife_correct(sdid, data):
     panel = data.panel()
     # we need at least two treatment units for jackknife
-    panel.intervention["Wyoming"].loc[1989:] = 1
+    panel.intervention.loc[1989:, "Wyoming"] = 1
 
     result = sdid.fit(panel)
     assert_almost_equal(-4.1538623012790161, result.effect.value)
@@ -54,7 +54,7 @@ def test_fast_jackknife_matches_standard(data):
     """Fast JackKnife (use_fast_jackknife=True) must produce the same SE as the standard JackKnife."""
     panel = data.panel()
     # we need at least two treatment units for jackknife
-    panel.intervention["Wyoming"].loc[1989:] = 1
+    panel.intervention.loc[1989:, "Wyoming"] = 1
 
     # standard JackKnife
     sdid_std = SDID(use_fast_jackknife=False)
