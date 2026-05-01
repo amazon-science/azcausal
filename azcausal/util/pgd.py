@@ -90,28 +90,28 @@ class ProjectedGradientDescent(Solver):
         else:
             x = x0.copy()
 
-        # Initial step size from gradient norm
-        Ax = A @ x
-        grad = 2.0 * A.T @ (Ax - b) / n_time + 2.0 * reg * x
-        step = 1e-3 / (np.linalg.norm(grad) + 1e-10)
+        # Lipschitz-based initial step size: L = 2 * (||A||^2 / n + reg)
+        L = 2.0 * (np.linalg.norm(A, ord='fro') ** 2 / n_time + reg)
+        step = 1.0 / L
 
         f = f_ridge(A, x, b, zeta)
 
-        iter = 0
-        for iter in range(1, self.max_iter + 1):
+        n_iter = 0
+        for n_iter in range(1, self.max_iter + 1):
             Ax = A @ x
             grad = 2.0 * A.T @ (Ax - b) / n_time + 2.0 * reg * x
 
             x_new = project_simplex(x - step * grad)
             f_new = f_ridge(A, x_new, b, zeta)
 
-            # Adaptive step size
+            # Adaptive step size: shrink on bad steps, grow on good steps
             if f_new > f:
                 step *= 0.5
             else:
-                step *= 1.05
+                step *= 1.2
 
-            if np.linalg.norm(x_new - x) < tol:
+            # Converge when objective stops decreasing
+            if f - f_new < tol ** 2:
                 x = x_new
                 f = f_new
                 break
@@ -119,4 +119,4 @@ class ProjectedGradientDescent(Solver):
             x = x_new
             f = f_new
 
-        return dict(x=x, f=f, iter=iter)
+        return dict(x=x, f=f, n_iter=n_iter)

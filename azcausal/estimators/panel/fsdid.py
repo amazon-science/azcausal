@@ -23,6 +23,7 @@ class FSDID(SDID):
 
     2. **Fast JackKnife**: Analytical leave-one-out SE computation instead
        of refitting the estimator N times. O(N) instead of O(N * fit_cost).
+       Enabled automatically — just pass ``JackKnife()`` as usual.
 
     Usage::
 
