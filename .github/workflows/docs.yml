@@ -26,23 +26,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+      - name: Install pandoc
+        run: sudo apt-get update && sudo apt-get install -y pandoc
       - name: Install azcausal
         run: pip install '.[full]'
       - name: Install Documentation Dependencies
         run: pip install -r docs/requirements.txt
       - name: Run Jupyter Notebooks
         run: python docs/run_ipynb.py
-      - uses: ammaraskar/sphinx-action@master
-        with:
-          docs-folder: "docs/"
-          pre-build-command: "apt-get install -y pandoc && pip install pandoc"
+      - name: Build Sphinx docs
+        run: cd docs && make html
+      - name: Copy to latest
+        run: cp -r docs/build/html docs/build/html_tmp && mkdir -p docs/build/html/latest && cp -r docs/build/html_tmp/* docs/build/html/latest/ && rm -rf docs/build/html_tmp
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v4
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: 'docs/build/html/'
-#      - name: Deploy to GitHub Pages
-#        id: deployment
-#        uses: actions/deploy-pages@v2
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

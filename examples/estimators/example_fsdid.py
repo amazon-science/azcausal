@@ -1,3 +1,4 @@
+from azcausal.core.error import JackKnife
 from azcausal.core.panel import CausalPanel
 from azcausal.data import CaliforniaProp99
 from azcausal.estimators.panel.fsdid import FSDID
@@ -14,11 +15,14 @@ if __name__ == '__main__':
     # initialize the panel
     panel = CausalPanel(data).setup(**ctypes)
 
-    # initialize an estimator object, here synthetic difference in difference (sdid)
-    estimator = FSDID(solver='grad')
+    # initialize the fast SDID estimator
+    estimator = FSDID()
 
     # run the estimator
     result = estimator.fit(panel)
+
+    # run error estimation
+    estimator.error(result, JackKnife())
 
     # print out information about the estimate
     print(result.summary(title="CaliforniaProp99"))

@@ -68,6 +68,8 @@ html_baseurl = 'latest/'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+html_css_files = ['custom.css']
+
 html_logo = 'logo.png'
 html_favicon = 'logo.ico'
 
