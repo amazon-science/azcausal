@@ -50,6 +50,10 @@ azcausal is a toolkit for causal inference in general and provides implementatio
       - 
     * - :ref:`Synthetic Difference in Difference (SDID)<sdid>` 
       - :cite:p:`sdid`
+    * - :ref:`Fast Synthetic Difference in Difference (FSDID)<fsdid>` 
+      - 
+    * - :ref:`Augmented Synthetic Difference in Difference (ASDID)<asdid>` 
+      - 
     * - :ref:`Synthetic Nearest Neighbor (SNN)<snn>`
       - :cite:p:`snn`
 
